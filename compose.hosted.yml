@@ -1,0 +1,28 @@
+services:
+  recruiter:
+    profiles: ["hosted"]
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: agentflow
+      DB_USER: agentflow_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-northstar-local-admin}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-northstar-local-app}
+      READER_DB_PASSWORD: ${READER_DB_PASSWORD:-northstar-local-reader}
+      AGENTFLOW_SESSION_SECRET: local-hosting-verification-secret-32-characters
+      AGENTFLOW_PUBLIC_DEMO: "true"
+      AGENTFLOW_PUBLIC_ORIGIN: http://127.0.0.1:${RECRUITER_PORT:-3011}
+      PORT: "10000"
+    ports:
+      - "127.0.0.1:${RECRUITER_PORT:-3011}:10000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:10000/readyz', timeout=8)"]
+      interval: 5s
+      timeout: 9s
+      retries: 20

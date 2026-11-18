@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: agentflow
+    runtime: docker
+    plan: free
+    dockerfilePath: ./deploy/Dockerfile
+    dockerContext: .
+    healthCheckPath: /readyz
+    autoDeployTrigger: "off"
+    envVars:
+      - key: ADMIN_DATABASE_URL
+        sync: false
+      - key: APP_DB_PASSWORD
+        generateValue: true
+      - key: READER_DB_PASSWORD
+        generateValue: true
+      - key: AGENTFLOW_SESSION_SECRET
+        generateValue: true
+      - key: AGENTFLOW_PUBLIC_DEMO
+        value: "true"
+      - key: PORT
+        value: "10000"
