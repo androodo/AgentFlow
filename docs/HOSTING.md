@@ -17,6 +17,10 @@ For a new instance, create a dedicated Neon project and database. Copy its **dir
 
 The public origin is derived from `RENDER_EXTERNAL_URL`. For a custom domain, set `AGENTFLOW_PUBLIC_ORIGIN` to the exact HTTPS origin and redeploy. Use a single web-service instance. [Render blueprints](https://render.com/docs/blueprint-spec)
 
+## Automatic deploys
+
+The Blueprint sets Auto-Deploy to **After CI Checks Pass**. Render watches the GitHub Actions checks on the linked branch. After the Blueprint syncs this setting, pushes to `main` deploy automatically when verification passes. In Render, check the service's **Settings → Build & Deploy → Auto-Deploy** to confirm the setting. [Render automatic deploys](https://render.com/docs/deploys#automatic-deploys)
+
 ## Verify the deployment
 
 ```powershell
