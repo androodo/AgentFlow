@@ -4,6 +4,8 @@ AgentFlow is an operations investigation workspace for retail incidents. It coor
 
 [Open AgentFlow](https://agentflow-ho1a.onrender.com)
 
+[Download the 2:43 AgentFlow walkthrough](docs/media/agentflow_demo.mp4?raw=true). The captioned video follows a synthetic checkout incident through evidence review, approval, and report export.
+
 ![AgentFlow operations workspace](docs/screenshots/overview.png)
 
 ## Investigate an incident
