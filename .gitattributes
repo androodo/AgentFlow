@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.png binary
+# Markdown uses trailing spaces for explicit line breaks in exported reports.
+*.md whitespace=-blank-at-eol
