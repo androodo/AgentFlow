@@ -4,7 +4,7 @@ AgentFlow is an operations investigation workspace for retail incidents. It coor
 
 [Open AgentFlow](https://agentflow-ho1a.onrender.com)
 
-[Watch the 2:43 AgentFlow walkthrough](https://drive.google.com/file/d/1KjOO-RhE7xqKAVVSHlzPKJ_egUECEOGR/view?usp=sharing). The captioned video follows a synthetic checkout incident through evidence review, approval, and report export.
+[Watch the 2:07 AgentFlow walkthrough](https://drive.google.com/file/d/1KjOO-RhE7xqKAVVSHlzPKJ_egUECEOGR/view?usp=sharing). The captioned video follows a synthetic checkout incident analyzed by Qwen 2.5 through Ollama, from model activity and source evidence to human approval and Markdown export.
 
 ![AgentFlow operations workspace](docs/screenshots/overview.png)
 
