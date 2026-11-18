@@ -5,10 +5,34 @@ import signal
 import subprocess
 import sys
 import time
-from urllib.request import urlopen
+from urllib.error import HTTPError
+from urllib.request import ProxyHandler, build_opener
 
 from agentflow.config import db_fields
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
+
+
+def wait_for_mcp(process: subprocess.Popen, timeout: float = 75) -> None:
+    # A cold import can take longer on Render's free CPU. Probe loopback directly.
+    opener = build_opener(ProxyHandler({}))
+    deadline = time.monotonic() + timeout
+    last_probe = "no response"
+    while time.monotonic() < deadline:
+        exit_code = process.poll()
+        if exit_code is not None:
+            raise RuntimeError(f"MCP exited during startup (return code {exit_code}).")
+        try:
+            with opener.open("http://127.0.0.1:8002/healthz", timeout=2) as response:
+                if response.status == 200:
+                    return
+                last_probe = f"HTTP {response.status}"
+        except HTTPError as exc:
+            last_probe = f"HTTP {exc.code}"
+            exc.close()
+        except OSError as exc:
+            last_probe = type(exc).__name__
+        time.sleep(0.5)
+    raise RuntimeError(f"MCP did not become ready within {timeout:g}s (last probe: {last_probe}).")
 
 
 def role_url(admin: str, role: str, password: str) -> str:
@@ -68,6 +92,7 @@ def main() -> None:
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
     try:
+        print("Starting the MCP service on loopback.", flush=True)
         mcp = subprocess.Popen(
             [
                 sys.executable,
@@ -85,17 +110,8 @@ def main() -> None:
             env={**mcp_env, "DATABASE_URL": reader_url},
         )
         processes.append(mcp)
-        for _ in range(50):
-            if mcp.poll() is not None:
-                raise RuntimeError("MCP exited during startup.")
-            try:
-                with urlopen("http://127.0.0.1:8002/healthz", timeout=2) as response:
-                    if response.status == 200:
-                        break
-            except OSError:
-                time.sleep(0.2)
-        else:
-            raise RuntimeError("MCP did not become ready.")
+        wait_for_mcp(mcp)
+        print("MCP is ready. Starting the web service.", flush=True)
         api = subprocess.Popen(
             [
                 sys.executable,
