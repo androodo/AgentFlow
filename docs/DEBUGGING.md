@@ -40,7 +40,7 @@ Invoke-RestMethod "http://127.0.0.1:8001/api/v1/investigations/$runId/events"
 docker compose logs --tail 100 api mcp
 ```
 
-For the recruiter preview, inspect `docker compose -f compose.yml -f compose.hosted.yml --profile hosted logs --tail 100 recruiter`. Its URL is port 3011. Public requests need the same signed visitor cookie as the browser that created the run; a fresh PowerShell request has a different visitor identity.
+For the hosted preview, inspect `docker compose -f compose.yml -f compose.hosted.yml --profile hosted logs --tail 100 hosted-app`. Its URL is port 3011. Public requests need the same signed visitor cookie as the browser that created the run; a fresh PowerShell request has a different visitor identity.
 
 ## Recognize expected states
 
@@ -70,7 +70,7 @@ npm.cmd --prefix web test
 python scripts/verify-public.py --restart-local
 ```
 
-The restart proof temporarily restarts the recruiter service. For an isolated worker recovery proof, stop the owner API first and restore it afterward, as recorded in [verification](VERIFICATION.md).
+The restart proof temporarily restarts the hosted application service. For an isolated worker recovery proof, stop the owner API first and restore it afterward, as recorded in [verification](VERIFICATION.md).
 
 ## Use the commit history
 

@@ -1,6 +1,6 @@
 # Local deployment
 
-For the recruiter deployment, use the [Render hosting guide](HOSTING.md). For OpenAI and Claude credentials, use [model setup](MODELS.md).
+For the hosted deployment, use the [Render hosting guide](HOSTING.md). For OpenAI and Claude credentials, use [model setup](MODELS.md).
 
 Start Docker Desktop using Linux containers and WSL 2 on Windows. Both the demonstration and its data load run without external credentials. The initial build needs registry access for Python, Node, Nginx, and PostgreSQL images and packages. Port overrides in `.env` are `WEB_PORT`, `API_PORT`, and `MCP_PORT`. PostgreSQL remains on the project network. Keep `.env` private and change local database passwords before reusing the stack for anything shared.
 

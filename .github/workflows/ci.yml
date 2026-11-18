@@ -21,9 +21,9 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Verify the local stack and browser demo
         run: bash scripts/verify.sh
-      - name: Verify the recruiter hosting container
+      - name: Verify the hosted application container
         run: |
-          docker compose -f compose.yml -f compose.hosted.yml --profile hosted up --build -d --wait --wait-timeout 180 recruiter
+          docker compose -f compose.yml -f compose.hosted.yml --profile hosted up --build -d --wait --wait-timeout 180 hosted-app
           python3 scripts/verify-public.py
       - name: Stop AgentFlow services
         if: always()

@@ -164,7 +164,7 @@ export function NewInvestigation() {
           value={question ?? scenario.question} onChange={(event) => setQuestion(event.target.value)}
           aria-describedby="question-hint" />
         <p className="field-hint" id="question-hint">{publicDemo
-          ? 'This public demo uses the seeded questions. Each browser has its own review session.'
+          ? 'Public investigations use the scenario’s question. Your review history stays in this browser session.'
           : 'Ask about checkout, releases, or support within this incident.'}</p>
         {workspace.value && (mode ? <>
           <label htmlFor="mode">Execution mode</label>

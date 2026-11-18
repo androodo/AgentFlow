@@ -1,8 +1,8 @@
 # Engineering walkthrough
 
-## A 90-second explanation
+## Investigation workflow
 
-AgentFlow is a local operations investigation platform for the fictional Northstar Shop. A user selects a scoped incident and asks a question. A planner routes to metrics, release, and support specialists. Those nodes use the official MCP Python SDK across a real HTTP service boundary to read PostgreSQL through an isolated source role.
+AgentFlow is an operations investigation platform for the fictional Northstar Shop. A user selects a scoped incident and asks a question. A planner routes to metrics, release, and support specialists. Those nodes use the official MCP Python SDK across a real HTTP service boundary to read PostgreSQL through an isolated source role.
 
 The graph merges the resulting evidence by specialist. A deterministic auditor recomputes arithmetic from daily rows and checks source IDs and time windows. The composer produces observations, hypotheses, and evidence gaps. A LangGraph interrupt stores a draft for review. The review API commits a unique decision against the interrupt before the worker resumes. An approval and the finalized report are linked in PostgreSQL, so repeated requests and process restarts have bounded effects.
 
@@ -12,9 +12,9 @@ The default app uses rule-based decisions. Optional Ollama, OpenAI, or Claude in
 
 Sequential data collection is easier to debug and serves as the baseline. Parallel nodes reduce dependency waiting when inputs are independent, at the cost of reducer rules, trace ordering, and more simultaneous upstream work. The deterministic verifier provides a narrow, testable correctness envelope. The system represents ambiguous cases explicitly because combining signals into a narrative can otherwise overstate causes.
 
-A durable queue in the application database reduces local setup and gives the scheduler a recoverable source of work. A broker with leases and delayed delivery would help run many cases and teams concurrently, at the cost of a second persistence system. The design favors a PostgreSQL session lock and idempotent mutations for this single-workstation stack.
+A durable queue in the application database reduces local setup and gives the scheduler a recoverable source of work. A broker with leases and delayed delivery would help run many cases and teams concurrently, at the cost of a second persistence system. The design favors a PostgreSQL session lock and idempotent mutations for deployments with one active scheduler per database.
 
-## Interview questions
+## Design details
 
 ### 1. How does the planner decide what can run in parallel?
 

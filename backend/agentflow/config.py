@@ -107,7 +107,9 @@ class Settings:
         if judge_provider not in {"ollama", "openai", "anthropic"}:
             raise ValueError("Set AGENTFLOW_JUDGE_PROVIDER to ollama, openai, or anthropic.")
         if public and len(secret) < 32:
-            raise ValueError("Public demo requires a session secret with at least 32 characters.")
+            raise ValueError(
+                "The public workspace requires a session secret with at least 32 characters."
+            )
         if origin and (
             urlsplit(origin).scheme not in {"https", "http"}
             or not urlsplit(origin).netloc

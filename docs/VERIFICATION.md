@@ -8,9 +8,9 @@ The updated Docker backend suite passed 26 tests. In the regression checks, both
 
 ## November 18, 2026 public live-mode update
 
-Docker verification passed 25 backend tests. The new PostgreSQL check confirmed that OpenAI and Claude share the public limit and that a visitor can still start the rule-based demo after the live quota is used. The frontend production build passed, and the rebuilt recruiter container passed the anonymous-session and export checks with live access disabled by default. Funded calls to the recommended models have yet to be tested.
+Docker verification passed 25 backend tests. The new PostgreSQL check confirmed that OpenAI and Claude share the public limit and that a visitor can still start the rule-based demo after the live quota is used. The frontend production build passed, and the rebuilt hosted container passed the anonymous-session and export checks with live access disabled by default. Funded calls to the recommended models have yet to be tested.
 
-The live-only follow-up passed lint, type checks, the production build, and four browser flows on the local recruiter container. The browser test used intercepted requests to check the OpenAI default and Claude selection without paid calls. A local API check verified provider ordering and rejected direct rule-based starts in live-only mode. The default public demo also passed the anonymous-session and export checks.
+The live-only follow-up passed lint, type checks, the production build, and four browser flows on the local hosted container. The browser test used intercepted requests to check the OpenAI default and Claude selection without paid calls. A local API check verified provider ordering and rejected direct rule-based starts in live-only mode. The default public demo also passed the anonymous-session and export checks.
 
 ## November 17, 2026 update
 
@@ -21,11 +21,11 @@ The updated application was exercised on Windows and Docker Desktop. The default
 - All four browser tests passed, covering the new findings-first screen, execution details, evidence lookup, approval and download, the paired 15-case benchmark, mobile layout, and the dataset introduction.
 - The deterministic benchmark passed all 15 cases per strategy, including three separately authored held-out cases. The benchmark references remain project-authored.
 - A fresh PostgreSQL instance was bootstrapped twice using a database owner with CREATEDB and CREATEROLE privileges and no superuser status. Migrations, both seed manifests, restricted service roles, and checkpointer initialization passed. The checkpoint schema grants avoid requiring role-switch privileges.
-- The public container passed separate visitor-session checks, cross-session read/review/report rejection, approval-gated exports, duplicate-review rejection, paid-model restrictions, and per-session rate limits. A separate check stopped the local owner API, restarted the recruiter container at its parked review checkpoint, then resumed and exported once using the same visitor cookie.
+- The public container passed separate visitor-session checks, cross-session read/review/report rejection, approval-gated exports, duplicate-review rejection, paid-model restrictions, and per-session rate limits. A separate check stopped the local owner API, restarted the hosted container at its parked review checkpoint, then resumed and exported once using the same visitor cookie.
 - Two bootstrap runs retained identical source data. The updated source snapshot SHA-256 is `f1fb660d86a0349d07039d0044f9cca41cbbe4a289b15d1379c4d006c140a9a8`.
 - The default API retained its human interrupt through restart and exported once after approval. A deliberate MCP outage degraded readiness, caused a bounded failed attempt, and recovered on restart.
 
-Commands executed for this update include `./scripts/verify.ps1`, `docker compose --profile verify run --build --rm --no-deps verify`, `npm.cmd --prefix web test`, the Render-image build through `compose.hosted.yml`, and `python scripts/verify-public.py`. The recruiter image also passed three browser flows for checkout, mobile layout, and the dataset introduction. The isolated restart check used `python scripts/verify-public.py --restart-local`.
+Commands executed for this update include `./scripts/verify.ps1`, `docker compose --profile verify run --build --rm --no-deps verify`, `npm.cmd --prefix web test`, the Render-image build through `compose.hosted.yml`, and `python scripts/verify-public.py`. The hosted image also passed three browser flows for checkout, mobile layout, and the dataset introduction. The isolated restart check used `python scripts/verify-public.py --restart-local`.
 
 Live OpenAI and Claude inference awaits provider credentials. Their HTTP schemas, parsing, retries, and failure handling were tested against simulated external provider boundaries. The actual MCP server, graph, evidence auditing, and review gate were used in the model integration test.
 

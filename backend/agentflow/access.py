@@ -1,4 +1,4 @@
-"""Visitor isolation and database-backed resource limits for the public recruiter demo."""
+"""Visitor isolation and database-backed resource limits for the public workspace."""
 
 import hashlib
 import hmac
@@ -91,7 +91,9 @@ def reserve_run(store: Store, settings: Settings, visitor: str, address: str) ->
             WHERE created_at > now()-interval '1 day'""")
         ).scalar_one()
         if recent >= 500:
-            raise Problem("demo_daily_limit", "The public demo has reached today's capacity.", 429)
+            raise Problem(
+                "demo_daily_limit", "The public workspace has reached today's capacity.", 429
+            )
 
 
 def public_write_allowed(request: Request, settings: Settings) -> None:

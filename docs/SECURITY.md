@@ -1,6 +1,6 @@
 # Security boundary
 
-The default stack is for a trusted local analyst. The Render blueprint enables a bounded public demonstration with signed browser sessions. Nginx, API, and MCP publish to IPv4 loopback. PostgreSQL has no published port. Local access shares a workspace. Public mode scopes investigations and review actions to the signed visitor cookie. Deployments with multiple people need authenticated reviewer identity and a per-tenant source policy.
+The default stack is for a trusted local analyst. The Render blueprint enables a public workspace with usage limits with signed browser sessions. Nginx, API, and MCP publish to IPv4 loopback. PostgreSQL has no published port. Local access shares a workspace. Public mode scopes investigations and review actions to the signed visitor cookie. Deployments with multiple people need authenticated reviewer identity and a per-tenant source policy.
 
 | Threat | Boundary |
 | --- | --- |

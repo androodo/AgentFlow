@@ -1,4 +1,4 @@
-"""Exercise the recruiter container using independent anonymous browser sessions."""
+"""Exercise the hosted container using independent anonymous browser sessions."""
 
 import argparse
 import http.cookiejar
@@ -53,7 +53,7 @@ def main():
     parser.add_argument(
         "--restart-local",
         action="store_true",
-        help="Restart the local recruiter container at its review checkpoint.",
+        help="Restart the local hosted container at its review checkpoint.",
     )
     args = parser.parse_args()
     owner, other = Visitor(args.url), Visitor(args.url)
@@ -88,7 +88,7 @@ def main():
                 "--profile",
                 "hosted",
                 "restart",
-                "recruiter",
+                "hosted-app",
             ],
             check=True,
         )
@@ -100,7 +100,7 @@ def main():
             except (OSError, AssertionError):
                 sleep(0.4)
         else:
-            raise TimeoutError("The recruiter container did not recover.")
+            raise TimeoutError("The hosted container did not recover.")
         assert (
             recovered["pending"] == pending["pending"]
             and recovered["checkpoint_id"] == pending["checkpoint_id"]
@@ -132,7 +132,7 @@ def main():
         other.request("/api/v1/investigations/" + limited["id"] + "/cancel", {})
     other.request("/api/v1/investigations", {"scenario_id": "healthy-rollout"}, expected=429)
     print(
-        "Public demo passed: separate sessions, private review/report, duplicate protection, paid-model restrictions, and per-session rate limits."
+        "Public workspace checks passed: separate sessions, private review/report, duplicate protection, paid-model restrictions, and per-session rate limits."
     )
 
 

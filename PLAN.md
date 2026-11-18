@@ -24,7 +24,7 @@ Hosted authentication, tenant isolation, distributed scheduling, cloud model end
 
 See [Verification](docs/VERIFICATION.md) for the executed checks and remaining coverage.
 
-## Recruiter experience and live reasoning update
+## Hosted workspace and live reasoning
 
 - [x] Put business findings first and move the graph into Execution details.
 - [x] Explain the fictional retailer and all source tables in About the data.
@@ -34,6 +34,6 @@ See [Verification](docs/VERIFICATION.md) for the executed checks and remaining c
 - [x] Build and exercise the Render container with browser-session review isolation.
 - [x] Provide a free Render blueprint and external PostgreSQL setup instructions.
 - [ ] Verify paid-provider inference after credentials are configured.
-- [ ] Activate the public Render deployment using the owner's Render and Neon accounts.
+- [x] Activate the public Render deployment.
 
-The richer local-model workflow rejected unsupported outputs from the installed small Ollama model. Live hosted-model verification is pending credentials. Final checks passed 24 Python tests, four owner-workspace browser tests, three recruiter-preview browser flows, visitor isolation/rate limits, and restart/resume.
+The richer local-model workflow rejected unsupported outputs from the installed small Ollama model. See the verification log for model test results, visitor isolation, rate limits, and restart recovery.
