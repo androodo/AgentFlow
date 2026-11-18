@@ -8,6 +8,7 @@ from sqlalchemy import text
 from agentflow.config import ROOT
 from agentflow.domain import Evidence, Report, digest
 from agentflow.models import ModelFailure, OllamaClient, StrictOutput
+from agentflow.providers import HostedClient, client_for
 from agentflow.store import Problem, Row, Store, encode
 from agentflow.transport import Emit, discard
 
@@ -37,7 +38,7 @@ class Judgment(StrictOutput):
 
 
 def score(
-    client: OllamaClient,
+    client: OllamaClient | HostedClient,
     model: str,
     report: Any,
     evidence: dict[str, Any],
@@ -51,12 +52,16 @@ def score(
         {"assessment": report, "evidence": evidence},
         emit,
         valid=lambda verdict: set(verdict.evidence_ids) <= evidence.keys(),
-        constraints={"evidence_ids": {"items": {"type": "string", "enum": sorted(evidence)}}},
+        constraints={
+            "evidence_ids": {"items": {"type": "string", "enum": sorted(evidence)}}
+            if evidence
+            else {"maxItems": 0}
+        },
     )
 
 
 def score_report(
-    client: OllamaClient,
+    client: OllamaClient | HostedClient,
     model: str,
     report: Report,
     evidence: dict[str, Evidence],
@@ -111,15 +116,16 @@ class Calibrations:
             (ROOT / "eval" / "reference_labels.json").read_text(encoding="utf-8")
         )
 
-    def create(self, model: str) -> UUID:
+    def create(self, model: str, provider: str = "ollama") -> UUID:
         job = uuid4()
         with self.store.engine.begin() as connection:
             connection.execute(
-                text("""INSERT INTO calibrations (id,model,status,reference_manifest,rubric_version)
-                       VALUES (:id,:model,'queued',CAST(:manifest AS jsonb),:rubric)"""),
+                text("""INSERT INTO calibrations (id,model,provider,status,reference_manifest,rubric_version)
+                VALUES (:id,:model,:provider,'queued',CAST(:manifest AS jsonb),:rubric)"""),
                 {
                     "id": job,
                     "model": model,
+                    "provider": provider,
                     "manifest": encode(self.references),
                     "rubric": RUBRIC_VERSION,
                 },
@@ -192,7 +198,11 @@ class Calibrations:
         result: Row = {"id": pending["id"], "text": pending["text"], "reference": pending["scores"]}
         try:
             context = references["contexts"][pending["context"]]
-            verdict = score(self.client, job["model"], pending["text"], context)
+            provider = job["provider"]
+            client = (
+                self.client if provider == "ollama" else client_for(self.client.settings, provider)
+            )
+            verdict = score(client, job["model"], pending["text"], context)
             result["judgment"] = verdict.model_dump(mode="json")
         except ModelFailure as exc:
             result["error"] = str(exc)

@@ -9,10 +9,47 @@ import httpx
 
 from agentflow.api_models import ComponentStatus
 from agentflow.config import Settings
-from agentflow.models import MAX_OUTPUT, PROMPT_VERSION, ModelFailure, OllamaClient, StrictOutput
+from agentflow.models import (
+    MAX_OUTPUT,
+    PROMPT_VERSION,
+    ModelFailure,
+    ModelOutputFailure,
+    OllamaClient,
+    StrictOutput,
+    correction_for,
+)
 from agentflow.transport import Emit
 
 ORIGINS = {"openai": "https://api.openai.com", "anthropic": "https://api.anthropic.com"}
+PROVIDER_NAMES = {"openai": "OpenAI", "anthropic": "Claude"}
+PERMANENT_STATUSES = {400, 401, 403, 404, 422, 429}
+HTTP_DETAILS = {
+    400: "the provider rejected the request. Check whether the model supports structured output.",
+    401: "the API key was rejected. Check the server key.",
+    403: "the API key does not have permission for this model or endpoint.",
+    404: "the configured model or endpoint was not found.",
+    422: "the provider rejected the request format.",
+    429: "the API is rate limited or out of credits. Check the provider dashboard.",
+}
+
+
+def failure_detail(exc: Exception, provider: str, node: str) -> tuple[str, ModelFailure]:
+    stage = f"{PROVIDER_NAMES[provider]} {node}"
+    if isinstance(exc, httpx.HTTPStatusError):
+        status = exc.response.status_code
+        detail = HTTP_DETAILS.get(status, "the provider could not complete the request.")
+        return f"http_{status}", ModelFailure(f"{stage} (HTTP {status}): {detail}")
+    if isinstance(exc, httpx.TimeoutException):
+        return "timeout", ModelFailure(f"{stage} timed out. Try again shortly.")
+    if isinstance(exc, httpx.HTTPError):
+        return "connection", ModelFailure(f"{stage} could not reach the provider.")
+    if isinstance(exc, ModelOutputFailure):
+        return "output_rejected", ModelOutputFailure(f"{stage}: {exc}")
+    if isinstance(exc, ModelFailure):
+        return "response_budget", ModelFailure(f"{stage}: {exc}")
+    return "invalid_structure", ModelOutputFailure(
+        f"{stage} returned an invalid or incomplete structured response."
+    )
 
 
 def strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
@@ -79,10 +116,11 @@ class HostedClient:
             with self._client(5) as client:
                 response = client.get("/v1/models/" + model)
                 response.raise_for_status()
-        except httpx.HTTPError:
+        except httpx.HTTPError as exc:
+            _, failure = failure_detail(exc, self.provider, "model access check")
             return ComponentStatus(
                 state="unavailable",
-                detail="Model access check failed. Check the server key and model ID.",
+                detail=str(failure),
             )
         return ComponentStatus(
             state="ok", detail=f"{model} is accessible. Inference usage is billed by the provider."
@@ -176,9 +214,12 @@ class HostedClient:
                             )
                             if type(measured.get(key)) is int
                         }
-                        message = result["choices"][0]["message"]
+                        choice = result["choices"][0]
+                        if choice.get("finish_reason") == "length":
+                            raise ModelOutputFailure("The structured response was cut short.")
+                        message = choice["message"]
                         if message.get("refusal"):
-                            raise ModelFailure("The model declined this request.")
+                            raise ModelOutputFailure("The model declined this request.")
                         value = shape.model_validate_json(message["content"])
                     else:
                         measured = result.get("usage", {})
@@ -190,6 +231,10 @@ class HostedClient:
                             )
                             if type(measured.get(key)) is int
                         }
+                        if result.get("stop_reason") == "max_tokens":
+                            raise ModelOutputFailure("The structured response was cut short.")
+                        if result.get("stop_reason") == "refusal":
+                            raise ModelOutputFailure("The model declined this request.")
                         block = next(
                             block
                             for block in result["content"]
@@ -198,16 +243,18 @@ class HostedClient:
                         )
                         value = shape.model_validate(block["input"])
                     if valid and not valid(value):
-                        raise ModelFailure("The assessment failed evidence validation.")
+                        raise ModelOutputFailure("The assessment failed evidence validation.")
                 except (
                     httpx.HTTPError,
                     ValueError,
                     TypeError,
                     KeyError,
                     IndexError,
+                    AttributeError,
                     StopIteration,
                     ModelFailure,
                 ) as exc:
+                    reason, failure = failure_detail(exc, self.provider, node)
                     emit(
                         node,
                         "model_failed",
@@ -217,22 +264,22 @@ class HostedClient:
                             "attempt": attempt,
                             "duration_ms": round((perf_counter() - tick) * 1000, 1),
                             "error_type": type(exc).__name__,
+                            "error_code": reason,
+                            "reason": str(failure),
                         },
                     )
-                    permanent = isinstance(
-                        exc, httpx.HTTPStatusError
-                    ) and exc.response.status_code in (400, 401, 403, 404, 429)
-                    if attempt == 2 or permanent:
-                        raise ModelFailure(
-                            f"{self.provider.title()} failed. Check model access, usage limits, and structured output support."
-                        ) from exc
-                    payload["messages"].append(
-                        {
-                            "role": "user",
-                            "content": "The response failed validation. Use only the allowed labels and exact evidence IDs. "
-                            "Quote only numbers present in the supplied facts and avoid certainty claims. Return the full corrected object.",
-                        }
+                    permanent = (
+                        isinstance(exc, httpx.HTTPStatusError)
+                        and exc.response.status_code in PERMANENT_STATUSES
                     )
+                    if attempt == 2 or permanent:
+                        raise failure from None
+                    if isinstance(failure, ModelOutputFailure):
+                        payload["messages"].append(
+                            {"role": "user", "content": correction_for(node)}
+                        )
+                        if "reasoning_effort" in payload:
+                            payload["reasoning_effort"] = "none"
                     emit(node, "model_retry", {**metadata, "attempt": 2})
                     continue
                 emit(

@@ -203,7 +203,7 @@ def connections() -> Connections:
         database=database,
         mcp=mcp,
         ollama=ollama.status(settings.ollama_model),
-        judge=ollama.status(settings.judge_model, judge=True),
+        judge=judge_status(),
         langsmith=traces.status(),
         openai=client_for(settings, "openai").status(settings.openai_model),
         anthropic=client_for(settings, "anthropic").status(settings.anthropic_model),
@@ -216,16 +216,24 @@ def scenarios() -> list[Scenario]:
 
 
 def require_model(*, judge: bool = False, provider: str = "ollama") -> str:
-    model = settings.judge_model if judge else settings.model_for(provider)
+    if judge:
+        status = judge_status(probe=True)
+        if status.state != "ok":
+            raise Problem("model_unavailable", status.detail, 409)
+        return settings.judge_configuration()[1]
+    model = settings.model_for(provider)
     adapter = client_for(settings, provider)
-    status = (
-        adapter.status(model, probe=True)
-        if provider != "ollama"
-        else adapter.status(model, judge=judge)
-    )
+    status = adapter.status(model, probe=True) if provider != "ollama" else adapter.status(model)
     if status.state != "ok":
         raise Problem("model_unavailable", status.detail, 409)
     return model
+
+
+def judge_status(*, probe: bool = False) -> ComponentStatus:
+    provider, model = settings.judge_configuration()
+    if provider == "ollama":
+        return ollama.status(model, judge=True)
+    return client_for(settings, provider).status(model, probe=probe)
 
 
 def mode_label(row: Row) -> str:
@@ -377,7 +385,11 @@ def list_evaluations() -> list[Row]:
 def evaluate(payload: EvaluationRequest) -> JobCreated:
     model = require_model(provider=payload.mode) if payload.mode != "demo" else None
     judge_model = require_model(judge=True) if payload.judge else None
-    return JobCreated(id=benchmark.create(payload.strategy, payload.mode, model, judge_model))
+    return JobCreated(
+        id=benchmark.create(
+            payload.strategy, payload.mode, model, judge_model, settings.judge_provider
+        )
+    )
 
 
 @app.get("/api/v1/evaluations/{job_id}")
@@ -394,13 +406,13 @@ def evaluation(job_id: UUID, format: Literal["view", "json"] = "view") -> JSONRe
 @app.get("/api/v1/calibrations")
 def list_calibrations() -> list[Row]:
     return store.all(
-        "SELECT id,model,status,created_at,completed_at,error FROM calibrations ORDER BY created_at DESC LIMIT 12"
+        "SELECT id,model,provider,status,created_at,completed_at,error FROM calibrations ORDER BY created_at DESC LIMIT 12"
     )
 
 
 @app.post("/api/v1/calibrations", status_code=202)
 def start_calibration(_payload: Model) -> JobCreated:
-    return JobCreated(id=calibrations.create(require_model(judge=True)))
+    return JobCreated(id=calibrations.create(require_model(judge=True), settings.judge_provider))
 
 
 @app.get("/api/v1/calibrations/{job_id}")

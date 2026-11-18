@@ -1,9 +1,9 @@
 import { FlaskConical } from 'lucide-react'
 import { useState } from 'react'
-import { errorMessage, localDateLabel, useResource, write, type Connection, type Judgment } from './api'
+import { connectionAvailable, errorMessage, localDateLabel, modeNames, useResource, write, type Connection, type Judgment, type ModelProvider } from './api'
 import { Notice, Waiting } from './components'
 
-type CalibrationSummary = { id: string; model: string; status: string; created_at: string; error: string | null }
+type CalibrationSummary = { id: string; model: string; provider?: ModelProvider; status: string; created_at: string; error: string | null }
 type Calibration = CalibrationSummary & {
   total: number; label_source: string; reference_version: string; rubric_version: string
   agreement: Record<string, { scored: number; exact_matches: number; mean_absolute_error: number }>
@@ -16,7 +16,8 @@ export function CalibrationPanel({ connection }: { connection?: Connection }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const history = useResource<CalibrationSummary[]>('/calibrations', 0, refresh)
-  const selected = id ?? (connection?.state === 'ok' ? history.value?.[0]?.id : undefined)
+  const judgeAvailable = connectionAvailable(connection)
+  const selected = id ?? (judgeAvailable ? history.value?.[0]?.id : undefined)
   const calibration = useResource<Calibration>(selected ? '/calibrations/' + selected : null, 1600)
   const row = calibration.value
 
@@ -36,10 +37,10 @@ export function CalibrationPanel({ connection }: { connection?: Connection }) {
 
   return <section className="panel review-panel">
     <h2>Judge calibration</h2>
-    <p>{connection?.state === 'ok'
+    <p>{judgeAvailable
       ? 'Compare model scores with the project’s authored rubric annotations.'
       : connection?.detail ?? 'Checking judge configuration…'}</p>
-    {connection?.state === 'ok' && <button className="button secondary small" disabled={busy || row?.status === 'running' || row?.status === 'queued'}
+    {judgeAvailable && <button className="button secondary small" disabled={busy || row?.status === 'running' || row?.status === 'queued'}
       onClick={() => void runCalibration()}><FlaskConical size={15} aria-hidden /> Run calibration</button>}
     {(history.error || calibration.error || error) && <Notice>{calibration.error || history.error || error}</Notice>}
     {!!history.value?.length && <>
@@ -52,7 +53,7 @@ export function CalibrationPanel({ connection }: { connection?: Connection }) {
     {selected && !row && !calibration.error && <Waiting label="Loading calibration…" />}
     {row && <div className="calibration-results">
       <p><strong>{row.status === 'completed' ? 'Completed' : row.status}</strong> · {row.cases.length} / {row.total} reviewed</p>
-      <p>{row.model} · {row.reference_version}</p>
+      <p>{modeNames[row.provider ?? 'ollama']} · {row.model} · {row.reference_version}</p>
       <p>{row.label_source}</p>
       {row.error && <Notice>{row.error}</Notice>}
       {Object.keys(row.agreement).length > 0 && <ul className="agreement-list">

@@ -9,7 +9,6 @@ from agentflow.reasoning import (
     SpecialistAssessment,
     apply_narrative,
     narrative_valid,
-    numbers_grounded,
     projection,
     prose_valid,
 )
@@ -62,9 +61,7 @@ class ModelAdvisor:
                 value.focus in evidence
                 and value.follow_up in ("none", *options)
                 and prose_valid(value.observation)
-                and numbers_grounded(value.observation, evidence)
                 and prose_valid(value.alternative)
-                and numbers_grounded(value.alternative, evidence)
             ),
         )
 

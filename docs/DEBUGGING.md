@@ -10,7 +10,7 @@ Start with the run's **Findings** and **Execution details** pages. Each run has 
 | Incorrect rate or before/after delta | `backend/agentflow/calculations.py`, `audit.py` | Use counts and denominators, then recompute independently. |
 | MCP connectivity or tool contracts | `mcp-server/server.py`, `backend/agentflow/transport.py` | Tools stay typed, bounded, and read-only. |
 | Specialist routing or a follow-up | `workflow.py`, `advisor.py`, `followups.py` | The model selects an approved label; code builds the actual request. |
-| A rejected model response | `models.py`, `providers.py`, `reasoning.py` | Check schema, citation IDs, numeric literals, and measured error events. |
+| A rejected model response | `models.py`, `providers.py`, `reasoning.py` | Check the model stage and failure reason in Execution details. Investigative prose must be qualitative and use the supplied IDs in citation fields. |
 | A stuck run after restart | `worker.py`, `store.py`, `workflow.py` | Keep the worker's session lock and the existing graph thread. |
 | Review conflict or missing export | `store.py` methods `queue_review` and `synchronize` | Persist one decision per interrupt; export only after durable approval. |
 | A public visitor sees a 404 or 429 | `access.py`, `store.py`, API middleware | Check the same visitor cookie, ownership, and resource limits. |

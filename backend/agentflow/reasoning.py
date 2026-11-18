@@ -1,7 +1,6 @@
 """Validated model assessments over audited facts, with independently cited alternatives."""
 
 import re
-from decimal import Decimal, InvalidOperation
 from typing import Annotated, Literal
 
 from pydantic import Field
@@ -9,24 +8,26 @@ from pydantic import Field
 from agentflow.domain import Evidence, Finding, Hypothesis, Report
 from agentflow.models import ModelFailure, StrictOutput
 
+NoDigits = Annotated[str, Field(pattern=r"^[^0-9]*$")]
+
 
 class SpecialistAssessment(StrictOutput):
     focus: str = Field(min_length=1, max_length=80)
-    observation: str = Field(min_length=8, max_length=500)
-    alternative: str = Field(min_length=8, max_length=400)
+    observation: NoDigits = Field(min_length=8, max_length=500)
+    alternative: NoDigits = Field(min_length=8, max_length=400)
     follow_up: str = Field(max_length=40)
 
 
 class Explanation(StrictOutput):
     hypothesis: Hypothesis
-    title: str = Field(min_length=5, max_length=110)
-    assessment: str = Field(min_length=12, max_length=650)
+    title: NoDigits = Field(min_length=5, max_length=110)
+    assessment: NoDigits = Field(min_length=12, max_length=650)
     supporting_evidence: list[str] = Field(min_length=1, max_length=5)
     contradicting_evidence: list[str] = Field(max_length=3)
-    uncertainty: str = Field(min_length=12, max_length=450)
+    uncertainty: NoDigits = Field(min_length=12, max_length=450)
 
 
-Qualitative = Annotated[str, Field(min_length=8, max_length=350)]
+Qualitative = Annotated[NoDigits, Field(min_length=8, max_length=350)]
 
 
 class Narrative(StrictOutput):
@@ -80,36 +81,9 @@ def projection(evidence: dict[str, Evidence]) -> dict[str, object]:
 
 
 def prose_valid(text: str) -> bool:
-    # Structured citations and source-linked numerical checks complement human review.
+    # Exact figures come from the audited comparison; generated prose supplies interpretation.
     return not re.search(
-        r"https?://|<[^>]*>|\b(proves?|proven|definitely|certainly|guaranteed)\b", text, re.I
-    )
-
-
-def numbers_grounded(text: str, evidence: dict[str, Evidence]) -> bool:
-    # Literal matching catches invented figures; it cannot prove a claim's meaning.
-    # The evidence auditor checks arithmetic, and human review checks interpretation.
-    allowed: set[Decimal] = set()
-
-    def collect(value):
-        if isinstance(value, dict):
-            for child in value.values():
-                collect(child)
-        elif isinstance(value, list):
-            for child in value:
-                collect(child)
-        elif isinstance(value, (str, int, float)):
-            for token in re.findall(r"[0-9]+(?:\.[0-9]+)?", str(value).replace(",", "")):
-                try:
-                    number = Decimal(token)
-                    allowed.update({number, abs(number), abs(round(number, 2))})
-                except InvalidOperation:
-                    pass
-
-    collect(projection(evidence))
-    return all(
-        Decimal(token) in allowed
-        for token in re.findall(r"[0-9]+(?:\.[0-9]+)?", text.replace(",", ""))
+        r"\d|https?://|<[^>]*>|\b(proves?|proven|definitely|certainly|guaranteed)\b", text, re.I
     )
 
 
@@ -118,13 +92,6 @@ def narrative_valid(value: Narrative, evidence: dict[str, Evidence]) -> bool:
     prose = [*value.next_actions, *value.unresolved_questions]
     for explanation in value.explanations:
         if not set(explanation.supporting_evidence + explanation.contradicting_evidence) <= ids:
-            return False
-        factual_text = " ".join(
-            (explanation.title, explanation.assessment, explanation.uncertainty)
-        )
-        cited = set(explanation.supporting_evidence + explanation.contradicting_evidence)
-        references = {key: record for key, record in evidence.items() if record.id in cited}
-        if not numbers_grounded(factual_text, references):
             return False
         prose += [explanation.title, explanation.assessment, explanation.uncertainty]
     return all(prose_valid(item) for item in prose)

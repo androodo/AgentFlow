@@ -1,5 +1,11 @@
 # Verification
 
+## November 18, 2026 hosted model recovery
+
+Reproduced the original Checkout Conversion Drop failure on Render with live GPT-6 Luna. The planner and initial specialists returned validated responses. The metrics follow-up then returned billable responses that failed local validation on both attempts before report composition. The original trace did not record the precise rejection reason.
+
+The updated Docker backend suite passed 26 tests. In the regression checks, both simulated hosted provider boundaries used actual MCP and PostgreSQL services. The checks rejected unreliable metrics prose, kept audited evidence, formed a model draft, applied a human revision, and approved it. The same checks exercised hosted benchmark scoring and a persisted calibration step. The Render image built successfully. Verification with the updated code and funded provider accounts requires redeploying the fix.
+
 ## November 18, 2026 public live-mode update
 
 Docker verification passed 25 backend tests. The new PostgreSQL check confirmed that OpenAI and Claude share the public limit and that a visitor can still start the rule-based demo after the live quota is used. The frontend production build passed, and the rebuilt recruiter container passed the anonymous-session and export checks with live access disabled by default. Funded calls to the recommended models have yet to be tested.

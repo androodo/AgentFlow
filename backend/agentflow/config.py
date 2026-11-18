@@ -76,6 +76,7 @@ class Settings:
     openai_model: str = ""
     anthropic_key: str = ""
     anthropic_model: str = ""
+    judge_provider: str = "ollama"
     public_demo: bool = False
     public_live_only: bool = False
     public_live_daily_limit: int = 0
@@ -89,11 +90,22 @@ class Settings:
             "anthropic": self.anthropic_model,
         }.get(provider, "")
 
+    def judge_configuration(self) -> tuple[str, str]:
+        model = (
+            self.judge_model
+            if self.judge_provider == "ollama"
+            else self.model_for(self.judge_provider)
+        )
+        return self.judge_provider, model
+
     @classmethod
     def from_env(cls) -> "Settings":
         public = environ.get("AGENTFLOW_PUBLIC_DEMO") == "true"
         origin = environ.get("AGENTFLOW_PUBLIC_ORIGIN", "").rstrip("/")
         secret = environ.get("AGENTFLOW_SESSION_SECRET", "")
+        judge_provider = environ.get("AGENTFLOW_JUDGE_PROVIDER", "ollama").strip().lower()
+        if judge_provider not in {"ollama", "openai", "anthropic"}:
+            raise ValueError("Set AGENTFLOW_JUDGE_PROVIDER to ollama, openai, or anthropic.")
         if public and len(secret) < 32:
             raise ValueError("Public demo requires a session secret with at least 32 characters.")
         if origin and (
@@ -126,6 +138,7 @@ class Settings:
             openai_model=environ.get("OPENAI_MODEL", ""),
             anthropic_key=environ.get("ANTHROPIC_API_KEY", ""),
             anthropic_model=environ.get("ANTHROPIC_MODEL", ""),
+            judge_provider=judge_provider,
             public_demo=public,
             public_live_only=environ.get("AGENTFLOW_PUBLIC_LIVE_ONLY") == "true",
             public_live_daily_limit=max(

@@ -23,6 +23,7 @@ from agentflow.models import (
     ModelFailure,
     OllamaClient,
 )
+from agentflow.providers import client_for
 from agentflow.reporting import LIMITATION, verify_citations
 from agentflow.store import Problem, Row, Store, encode
 from agentflow.transport import MCPClient
@@ -101,13 +102,20 @@ class Benchmarks:
         self.ollama = ollama
         self.traces = traces
 
-    def create(self, strategy: str, mode: Mode, model: str | None, judge_model: str | None) -> UUID:
+    def create(
+        self,
+        strategy: str,
+        mode: Mode,
+        model: str | None,
+        judge_model: str | None,
+        judge_provider: str = "ollama",
+    ) -> UUID:
         with self.store.engine.begin() as connection:
             job_id = uuid4()
             connection.execute(
                 text(
-                    """INSERT INTO evaluations (id,strategy,mode,model,judge_model,dataset_version,status)
-                   VALUES (:id,:strategy,:mode,:model,:judge,:version,'queued')"""
+                    """INSERT INTO evaluations (id,strategy,mode,model,judge_model,judge_provider,dataset_version,status)
+                   VALUES (:id,:strategy,:mode,:model,:judge,:judge_provider,:version,'queued')"""
                 ),
                 {
                     "id": job_id,
@@ -115,6 +123,7 @@ class Benchmarks:
                     "mode": mode,
                     "model": model,
                     "judge": judge_model,
+                    "judge_provider": judge_provider,
                     "version": DATASET_VERSION,
                 },
             )
@@ -338,7 +347,12 @@ class Benchmarks:
                 row["eval_count"] + row["prompt_eval_count"] for row in model_calls
             )
         if job["judge_model"] and result["observed"]:
-            result["judge"] = score_report(self.ollama, job["judge_model"], report, evidence, log)
+            provider = job["judge_provider"]
+            judge = (
+                self.ollama if provider == "ollama" else client_for(self.ollama.settings, provider)
+            )
+            result["judge"] = score_report(judge, job["judge_model"], report, evidence, log)
+            result["judge"]["provider"] = provider
         self.traces.send(
             "agentflow.evaluation-case",
             started,

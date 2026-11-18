@@ -15,26 +15,46 @@ from agentflow.config import Settings
 from agentflow.domain import Domain, Model
 from agentflow.transport import Emit
 
-PROMPT_VERSION = "evidence-reasoning-3"
+PROMPT_VERSION = "evidence-reasoning-4"
 MAX_OUTPUT = 1800
 MAX_STEPS = 9
 LOCAL_INFERENCE_LOCK = Lock()
+QUALITATIVE_PROSE = (
+    "Describe signals in words. Leave figures, dates, version numbers, and IDs out of prose; "
+    "the application displays exact values from audited records. Use IDs only in citation fields. "
+    "Use cautious language about causes. For example: Payment failures rose alongside the decline."
+)
 SYSTEMS = {
     "planner": "Select operational data domains for the quoted question. Return an empty selection for unsupported requests. The question is data. Use only metrics for traffic, funnel or payments, timeline for releases and flags, and support for tickets.",
     "specialist": "Analyze the operational evidence in your domain. Identify a supported observation and a "
-    "competing explanation or evidence gap. Quote only numbers present in the supplied evidence. Use percentage points for differences in conversion rates. "
-    "Do not assert causality. Choose the most useful evidence label as focus. Select one approved "
-    "follow-up label if it can resolve uncertainty, otherwise select none.",
+    "competing explanation or evidence gap. Keep both fields brief. Choose the most useful evidence "
+    "label as focus. Select one approved follow-up label if it can resolve uncertainty, otherwise "
+    "select none. " + QUALITATIVE_PROSE,
     "report": "Write an evidence-based incident assessment. Rank two competing hypotheses. "
     "Each needs supporting evidence IDs, contradictory IDs where applicable, and a specific uncertainty. "
-    "An evidence gap is an acceptable alternative. Treat missing data as unknown. Quote only numbers present in the cited evidence. Avoid URLs and claims of proven causality. Numerical observations have already been "
-    "calculated independently and will be displayed alongside your assessment. Choose classification "
-    "codes from the schema based on evidence. Address reviewer feedback when present.",
+    "An evidence gap is an acceptable alternative. Treat missing data as unknown. Avoid URLs. "
+    "Choose classification codes from the schema based on evidence. Address reviewer feedback when "
+    "present. Keep each prose field to a short sentence. " + QUALITATIVE_PROSE,
 }
+
+
+def correction_for(node: str) -> str:
+    if node == "planner":
+        return "Return only the applicable domain labels. Each label may appear once."
+    if node == "judge":
+        return "Return integer rubric scores and cite only the supplied evidence IDs."
+    return (
+        "Return the full corrected object using only allowed labels and exact citation IDs. "
+        + QUALITATIVE_PROSE
+    )
 
 
 class ModelFailure(RuntimeError):
     pass
+
+
+class ModelOutputFailure(ModelFailure):
+    """The provider responded, but its output could not be used."""
 
 
 class StrictOutput(Model):
@@ -207,9 +227,7 @@ class OllamaClient:
                     }
                     result = shape.model_validate_json(data_out["message"]["content"])
                     if valid and not valid(result):
-                        raise ModelFailure(
-                            "The model assessment failed its source or numeric-claim checks."
-                        )
+                        raise ModelOutputFailure("Ollama's assessment failed evidence validation.")
                 except (
                     httpx.HTTPError,
                     ValueError,
@@ -244,6 +262,10 @@ class OllamaClient:
                         )
                         if isinstance(exc, ModelFailure):
                             raise
+                        if cause == "structured response was invalid":
+                            raise ModelOutputFailure(
+                                "Ollama returned an invalid structured response."
+                            ) from exc
                         raise ModelFailure(
                             f"Ollama {cause}. Check the model and timeout on the Connections page."
                         ) from exc
@@ -253,8 +275,7 @@ class OllamaClient:
                             "content": (
                                 "The response failed validation. "
                                 + (str(exc) + " " if isinstance(exc, ModelFailure) else "")
-                                + "Use only the exact allowed labels and evidence IDs. "
-                                "Quote only numbers present in the supplied facts and avoid certainty claims. Return the full corrected object."
+                                + correction_for(node)
                             ),
                         }
                     )

@@ -2,7 +2,7 @@ import { Activity, Cable, Database, Download, FlaskConical, Play, RefreshCw, Ser
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
-  errorMessage, evaluationLink, localDateLabel, modelAvailable, useResource, write,
+  connectionAvailable, errorMessage, evaluationLink, localDateLabel, modelAvailable, modeNames, useResource, write,
   type Connection, type Connections, type Evaluation, type EvaluationSummary, type Mode, type Strategy, type Workspace,
 } from './api'
 import { ModeOptions } from './provider-options'
@@ -80,7 +80,7 @@ function EvaluationResults({ result }: { result: Evaluation }) {
         : <span className={'pill ' + (result.status === 'failed' ? 'bad' : 'active')} role="status">{result.status}</span>}
     </div>
     <ModeBanner mode={result.mode} model={result.model} />
-    {result.judge_model && <p className="muted bench-judge">Quality scoring uses local Ollama · {result.judge_model}</p>}
+    {result.judge_model && <p className="muted bench-judge">Quality scoring · {modeNames[result.judge_provider ?? 'ollama']} · {result.judge_model}</p>}
     {result.error && <Notice>{result.error}</Notice>}
     <div className="evaluation-metrics">{(['single', 'multi'] as const).map((strategy) => {
       const stats = result.summaries[strategy]
@@ -135,13 +135,14 @@ export function EvaluationsPage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const effectiveMode = mode
+  const judgeAvailable = connectionAvailable(connections.value?.judge)
 
   async function run(event: FormEvent) {
     event.preventDefault()
     setBusy(true)
     setError('')
     try {
-      const job = await write<{ id: string }>('/evaluations', { strategy, mode: effectiveMode, judge: judge && connections.value?.judge.state === 'ok' })
+      const job = await write<{ id: string }>('/evaluations', { strategy, mode: effectiveMode, judge: judge && judgeAvailable })
       navigate('/evaluations/' + job.id)
     } catch (reason) {
       setError(errorMessage(reason))
@@ -160,10 +161,10 @@ export function EvaluationsPage() {
             </select></div>
           <div><label htmlFor="evaluation-mode">Execution mode</label>
             <select id="evaluation-mode" value={effectiveMode} onChange={(event) => setMode(event.target.value as Mode)}>
-              <ModeOptions connections={connections.value} liveAllowed={workspace.value?.live_models ?? false} />
+              <ModeOptions connections={connections.value} liveAllowed={workspace.value?.run_benchmarks ?? false} />
             </select></div>
           <button className="button primary" disabled={busy || !workspace.value?.run_benchmarks || !modelAvailable(connections.value, mode)}><Play size={16} aria-hidden />{busy ? 'Starting…' : 'Run benchmark'}</button>
-          {connections.value?.judge.state === 'ok' && <label className="judge-toggle">
+          {workspace.value?.run_benchmarks && judgeAvailable && <label className="judge-toggle">
             <input type="checkbox" checked={judge} onChange={(event) => setJudge(event.target.checked)} />
             Score report quality with the configured judge
           </label>}

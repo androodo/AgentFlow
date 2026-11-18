@@ -20,6 +20,7 @@ const kinds: Record<string, string> = {
   plan_selected: 'Investigation plan selected', tool_finished: 'MCP tool returned', tool_failed: 'MCP tool failed',
   tool_retry: 'Retrying MCP transport', tool_denied: 'Tool request denied', model_finished: 'Model response validated',
   specialist_focus: 'Specialist selected evidence', trace_exported: 'LangSmith metadata exported',
+  specialist_output_skipped: 'Unverified specialist text omitted',
   trace_export_failed: 'LangSmith export failed', model_failed: 'Model call failed', model_retry: 'Model request retry',
   evidence_verified: 'Evidence verified', awaiting_review: 'Checkpoint saved for review',
   decision_recorded: 'Review decision recorded', approved: 'Report finalized', rejected: 'Draft rejected',

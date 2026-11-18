@@ -12,6 +12,7 @@ from langgraph.types import interrupt
 from agentflow.audit import verify
 from agentflow.domain import Decision, Domain, Evidence, Mode, Plan, Report, Scenario, Strategy
 from agentflow.followups import followup_call
+from agentflow.models import ModelOutputFailure
 from agentflow.planning import calls_for, rule_plan
 from agentflow.reasoning import SpecialistAssessment
 from agentflow.reporting import compose, verify_citations
@@ -112,9 +113,25 @@ def build_graph(
         records = dict(zip(requests, found, strict=True))
         focus = {}
         if advisor:
-            assessment = advisor.inspect(domain, records, scenario.scope)
+
+            def inspect(*, final: bool = False) -> SpecialistAssessment | None:
+                try:
+                    return advisor.inspect(domain, records, scenario.scope, final=final)
+                except ModelOutputFailure:
+                    # Keep the verified source records. Never pass rejected prose to the composer.
+                    emit(
+                        node,
+                        "specialist_output_skipped",
+                        {
+                            "reason": "The specialist assessment could not be validated.",
+                            "followup": final,
+                        },
+                    )
+                    return None
+
+            assessment = inspect()
             # The model selects a recipe label; Python owns its tool, scope, and call budget.
-            if assessment.follow_up != "none":
+            if assessment and assessment.follow_up != "none":
                 key, call = followup_call(domain, assessment.follow_up, scenario.scope)
                 emit(
                     node,
@@ -122,12 +139,13 @@ def build_graph(
                     {"recipe": assessment.follow_up, "reason": assessment.alternative},
                 )
                 records[key] = client.collect(domain, [call], node, emit)[0]
-                assessment = advisor.inspect(domain, records, scenario.scope, final=True)
-            focus = {
-                **assessment.model_dump(mode="json"),
-                "evidence_id": records[assessment.focus].id,
-            }
-            emit(node, "specialist_focus", focus)
+                assessment = inspect(final=True) or assessment
+            if assessment:
+                focus = {
+                    **assessment.model_dump(mode="json"),
+                    "evidence_id": records[assessment.focus].id,
+                }
+                emit(node, "specialist_focus", focus)
         update: Flow = {
             "evidence": {key: value.model_dump(mode="json") for key, value in records.items()}
         }

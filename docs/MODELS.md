@@ -18,7 +18,7 @@ The model selects relevant domains from the question and the chosen incident sco
 
 The report composer ranks competing explanations, identifies evidence supporting and contradicting each, writes uncertainty, and proposes next actions. It receives the actual tool results and code-generated observations. Gold/reference benchmark answers stay outside model prompts.
 
-The auditor recomputes funnel counts and percentage-point differences from source rows. It checks hashes, source references, windows, and allowed follow-up recipes. Generated hypotheses must cite supplied IDs. Numeric literals in factual prose are checked against those cited facts. Numerical observations are composed from audited facts. These checks cover arithmetic, numeric literals, scope, and citation integrity. Semantic groundedness still requires review.
+The auditor recomputes funnel counts and percentage-point differences from source rows. It checks hashes, source references, windows, and allowed follow-up recipes. Generated hypotheses must cite supplied IDs and use qualitative prose. Exact figures come from the audited observations. If a specialist still returns unusable prose after a retry, the workflow omits that response and keeps its verified tool results for the composer. The activity log records the skipped response and the failure category. Semantic groundedness still requires review.
 
 A run can make up to nine logical model calls, including a revision, with two bounded attempts per call. Each call has an output budget, a response-size cap, and a timeout. Provider-reported token counts are recorded when supplied. OpenAI or Claude usage requires API access and is billed by that provider.
 
@@ -32,8 +32,10 @@ OpenAI is the public default when configured. To offer only hosted models, set `
 
 Deploy the latest commit and open **New investigation → Execution mode** on the public site. Select the configured provider and complete one seeded case to validate model access and report generation. Check measured usage in the provider dashboard. [Render environment variables](https://render.com/docs/configure-environment-variables)
 
-## Current verification boundary
+## Enable model judging and calibration
 
-The hosted adapters have request/response contract tests against simulated provider boundaries, including strict parsing, authentication failures, retries, and measured usage fields. A graph integration test uses simulated hosted responses with the actual MCP service to verify follow-up collection, citation validation, competing explanations, and approval. Live hosted calls await the owner's provider credentials.
+In the owner workspace, set `AGENTFLOW_JUDGE_PROVIDER=openai` or `AGENTFLOW_JUDGE_PROVIDER=anthropic` to use that provider's configured model for report-quality scoring and judge calibration. For local judging, keep `AGENTFLOW_JUDGE_PROVIDER=ollama` and set `OLLAMA_JUDGE_MODEL`. The job stores both the selected provider and the model so a restart resumes with the same pair.
 
-The reference judge currently uses the configured local Ollama judge model. Its authored reference labels are available for independent human review.
+In **Evaluations**, select a live provider to benchmark it and optionally enable **Score report quality with the configured judge**. Use **Run calibration** to compare judge scores with the project-authored references. These actions may make multiple billable requests and remain owner-only. Public visitors can inspect saved benchmark results.
+
+See [verification](VERIFICATION.md) for the distinction between simulated provider contracts and funded model runs.

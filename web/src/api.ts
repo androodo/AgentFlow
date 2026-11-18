@@ -10,7 +10,7 @@ export type Workspace = {
 }
 export type Explanation = { title: string; assessment: string; uncertainty: string; supporting_evidence: string[]; contradicting_evidence: string[] }
 export function modelAvailable(connections: Connections | undefined, mode: Mode) {
-  return mode === 'demo' || connections?.[mode]?.state === 'ok' || connections?.[mode]?.state === 'configured'
+  return mode === 'demo' || connectionAvailable(connections?.[mode])
 }
 export const demoLabel = 'Rule-based demo — no LLM involved'
 export type Window = { start: string; end: string }
@@ -49,6 +49,10 @@ export type Evidence = {
   payload: Record<string, unknown>
 }
 export type Connection = { state: 'ok' | 'unavailable' | 'not_configured' | 'configured'; detail: string }
+export function connectionAvailable(connection?: Connection) {
+  return connection?.state === 'ok' || connection?.state === 'configured'
+}
+export type ModelProvider = Exclude<Mode, 'demo'>
 export type Connections = Record<'api' | 'database' | 'mcp' | 'ollama' | 'openai' | 'anthropic' | 'langsmith' | 'judge', Connection>
 export type Strategy = 'single' | 'multi' | 'compare'
 export type EvaluationSummary = {
@@ -65,6 +69,7 @@ type BenchmarkResult = {
 }
 export type Evaluation = EvaluationSummary & {
   dataset_version: string; total_cases: number; cases: BenchmarkResult[]; judge_model?: string | null
+  judge_provider?: ModelProvider
   summaries: Partial<Record<'single' | 'multi', {
     holdout_completed?: number; holdout_passed?: number; completed: number; passed: number; median_duration_ms: number; tool_calls: number
   }>>
