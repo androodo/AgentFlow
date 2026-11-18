@@ -33,7 +33,7 @@ from agentflow.api_models import (
 from agentflow.benchmark import Benchmarks
 from agentflow.bootstrap import generate_rows
 from agentflow.config import DATASET_VERSION, DEMO_LABEL, ROOT, Settings, make_engine
-from agentflow.domain import Evidence, Model, RecordRequest, Report, Scenario, load_cases
+from agentflow.domain import Evidence, Mode, Model, RecordRequest, Report, Scenario, load_cases
 from agentflow.judge import Calibrations
 from agentflow.models import LangSmithExport, OllamaClient
 from agentflow.providers import client_for
@@ -278,11 +278,7 @@ def start_run(payload: StartRequest, request: Request) -> RunView:
     if not case:
         raise Problem("scenario_not_found", "Choose a scenario from the Northstar library.", 404)
     if settings.public_demo:
-        if (
-            payload.question
-            or payload.mode == "ollama"
-            or (payload.mode != "demo" and not settings.public_live_daily_limit)
-        ):
+        if payload.question or payload.mode not in public_investigation_modes():
             raise Problem("public_demo_scope", "Choose a seeded scenario and an enabled mode.", 403)
         reserve_run(
             store,
@@ -412,6 +408,18 @@ def calibration(job_id: UUID) -> Row:
     return calibrations.get(job_id)
 
 
+def public_investigation_modes() -> list[Mode]:
+    modes: list[Mode] = []
+    if settings.public_live_daily_limit > 0:
+        if settings.openai_key and settings.openai_model:
+            modes.append("openai")
+        if settings.anthropic_key and settings.anthropic_model:
+            modes.append("anthropic")
+    if not settings.public_live_only:
+        modes.append("demo")
+    return modes
+
+
 @app.get("/api/v1/workspace")
 def workspace() -> Row:
     sizes: dict[str, int] = {}
@@ -424,6 +432,7 @@ def workspace() -> Row:
         "custom_questions": not settings.public_demo,
         "run_benchmarks": not settings.public_demo,
         "live_models": not settings.public_demo or settings.public_live_daily_limit > 0,
+        "investigation_modes": public_investigation_modes() if settings.public_demo else None,
         "dataset": {
             "name": "Northstar Shop",
             "fictional": True,

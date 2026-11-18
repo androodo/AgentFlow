@@ -4,6 +4,8 @@
 
 Docker verification passed 25 backend tests. The new PostgreSQL check confirmed that OpenAI and Claude share the public limit and that a visitor can still start the rule-based demo after the live quota is used. The frontend production build passed, and the rebuilt recruiter container passed the anonymous-session and export checks with live access disabled by default. Funded calls to the recommended models have yet to be tested.
 
+The live-only follow-up passed lint, type checks, the production build, and four browser flows on the local recruiter container. The browser test used intercepted requests to check the OpenAI default and Claude selection without paid calls. A local API check verified provider ordering and rejected direct rule-based starts in live-only mode. The default public demo also passed the anonymous-session and export checks.
+
 ## November 17, 2026 update
 
 The updated application was exercised on Windows and Docker Desktop. The default mode remained credential-free.

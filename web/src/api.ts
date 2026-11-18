@@ -4,6 +4,7 @@ export type Mode = 'demo' | 'ollama' | 'openai' | 'anthropic'
 export const modeNames: Record<Mode, string> = { demo: 'Rule-based demo', ollama: 'Local Ollama', openai: 'OpenAI', anthropic: 'Claude' }
 export type Workspace = {
   public_demo: boolean; custom_questions: boolean; run_benchmarks: boolean; live_models: boolean
+  investigation_modes?: Mode[] | null
   dataset: { name: string; fictional: boolean; description: string; version: string; scenario_count: number
     tables: { name: string; rows: number; purpose: string }[] }
 }

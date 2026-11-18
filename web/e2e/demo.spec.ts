@@ -114,3 +114,28 @@ test('dataset introduction explains the fictional retailer and source records', 
   await page.getByRole('link', { name: 'Investigate this case' }).click()
   await expect(page.getByRole('combobox', { name: 'Scenario', exact: true })).toHaveValue('checkout-conversion-drop')
 })
+
+test('live-only public workspace defaults to OpenAI and offers Claude', async ({ page }) => {
+  await page.route('**/api/v1/workspace', async route => {
+    const response = await route.fetch()
+    await route.fulfill({ json: {
+      ...(await response.json()), public_demo: true, live_models: true, investigation_modes: ['openai', 'anthropic'],
+    } })
+  })
+  await page.route('**/api/v1/investigations', async route => {
+    await route.fulfill({ status: 429, json: { detail: 'Test request intercepted before provider use.' } })
+  })
+  await page.goto('/')
+  const checkout = page.getByRole('button', { name: 'Investigate with OpenAI' })
+  const featured = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/investigations'))
+  await checkout.click()
+  expect((await featured).postDataJSON()).toMatchObject({ scenario_id: 'checkout-conversion-drop', mode: 'openai' })
+  await page.getByRole('link', { name: 'New investigation' }).first().click()
+  const selector = page.getByLabel('Execution mode')
+  await expect(selector).toHaveValue('openai')
+  await expect(selector.getByRole('option')).toHaveText(['Live OpenAI', 'Live Claude'])
+  await selector.selectOption('anthropic')
+  const chosen = page.waitForRequest(request => request.method() === 'POST' && request.url().endsWith('/investigations'))
+  await page.getByRole('button', { name: 'Start investigation' }).click()
+  expect((await chosen).postDataJSON()).toMatchObject({ mode: 'anthropic' })
+})

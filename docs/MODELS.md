@@ -26,7 +26,9 @@ A run can make up to nine logical model calls, including a revision, with two bo
 
 On the AgentFlow web service, open **Environment**. Keep `AGENTFLOW_PUBLIC_DEMO=true` to preserve visitor isolation and seeded questions. To offer OpenAI, set `OPENAI_API_KEY` and `OPENAI_MODEL=gpt-6-luna`. To offer Claude, set `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL=claude-haiku-5-5`. Save keys in Render's server environment. Configure one provider or both.
 
-Set `AGENTFLOW_PUBLIC_LIVE_DAILY_LIMIT=5` to allow up to five live starts across both providers in a rolling 24-hour window. Each browser session can start up to two. The default is zero, and values above 20 are capped at 20. This controls run counts; dollar charges depend on provider, tokens, retries, and review revisions. The Demo option remains available under the usual demo limits. Set the live limit to zero and redeploy to stop new live starts.
+Set `AGENTFLOW_PUBLIC_LIVE_DAILY_LIMIT=5` to allow up to five live starts across both providers in a rolling 24-hour window. Each browser session can start up to two. The default is zero, and values above 20 are capped at 20. Actual charges depend on provider, tokens, retries, and review revisions.
+
+OpenAI is the public default when configured. To offer only hosted models, set `AGENTFLOW_PUBLIC_LIVE_ONLY=true` alongside a positive live limit and at least one configured provider. This removes the rule-based option from the public form and blocks direct demo starts through the public API. When no provider is configured, visitors cannot start an investigation in live-only mode. Remove the live-only setting and redeploy to restore the free option.
 
 Deploy the latest commit and open **New investigation → Execution mode** on the public site. Select the configured provider and complete one seeded case to validate model access and report generation. Check measured usage in the provider dashboard. [Render environment variables](https://render.com/docs/configure-environment-variables)
 
