@@ -1,0 +1,127 @@
+name: agentflow
+
+x-python: &python
+  image: agentflow-python:local
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+    target: runtime
+  init: true
+
+x-db: &db
+  DB_HOST: db
+  DB_NAME: agentflow
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agentflow
+      POSTGRES_USER: agentflow_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-northstar-local-admin}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentflow_admin -d agentflow"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  bootstrap:
+    <<: *python
+    command: ["python", "-m", "agentflow.bootstrap"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      <<: *db
+      DB_USER: agentflow_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-northstar-local-admin}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-northstar-local-app}
+      READER_DB_PASSWORD: ${READER_DB_PASSWORD:-northstar-local-reader}
+
+  mcp:
+    <<: *python
+    command: ["uvicorn", "server:app", "--app-dir", "mcp-server", "--host", "0.0.0.0", "--port", "8002", "--no-access-log"]
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    environment:
+      <<: *db
+      DB_USER: agentflow_reader
+      DB_PASSWORD: ${READER_DB_PASSWORD:-northstar-local-reader}
+    ports:
+      - "127.0.0.1:${MCP_PORT:-8002}:8002"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/healthz', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 15
+
+  api:
+    <<: *python
+    command: ["uvicorn", "agentflow.api:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "1", "--timeout-graceful-shutdown", "5"]
+    depends_on:
+      mcp:
+        condition: service_healthy
+    environment:
+      <<: *db
+      DB_USER: agentflow_app
+      DB_PASSWORD: ${APP_DB_PASSWORD:-northstar-local-app}
+      MCP_URL: http://mcp:8002/mcp
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-}
+      OLLAMA_TIMEOUT_SECONDS: ${OLLAMA_TIMEOUT_SECONDS:-45}
+      OLLAMA_JUDGE_MODEL: ${OLLAMA_JUDGE_MODEL:-}
+      AGENTFLOW_LANGSMITH: ${AGENTFLOW_LANGSMITH:-false}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-agentflow}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:${API_PORT:-8001}:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/readyz', timeout=6)"]
+      interval: 7s
+      timeout: 7s
+      retries: 20
+
+  web:
+    build: ./web
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3001}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  verify:
+    profiles: ["verify"]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: verify
+    environment:
+      <<: *db
+      DB_USER: agentflow_app
+      DB_PASSWORD: ${APP_DB_PASSWORD:-northstar-local-app}
+      TEST_READER_PASSWORD: ${READER_DB_PASSWORD:-northstar-local-reader}
+      MCP_URL: http://mcp:8002/mcp
+      AGENTFLOW_TEST_API: http://api:8001
+      AGENTFLOW_TEST_WEB: http://web:8080
+      AGENTFLOW_INTEGRATION: "1"
+    depends_on:
+      web:
+        condition: service_healthy
+    command: ["sh", "scripts/verify-backend.sh"]
+
+volumes:
+  postgres:
