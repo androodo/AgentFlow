@@ -278,8 +278,12 @@ def start_run(payload: StartRequest, request: Request) -> RunView:
     if not case:
         raise Problem("scenario_not_found", "Choose a scenario from the Northstar library.", 404)
     if settings.public_demo:
-        if payload.mode != "demo" or payload.question:
-            raise Problem("public_demo_scope", "Choose a seeded scenario in demo mode.", 403)
+        if (
+            payload.question
+            or payload.mode == "ollama"
+            or (payload.mode != "demo" and not settings.public_live_daily_limit)
+        ):
+            raise Problem("public_demo_scope", "Choose a seeded scenario and an enabled mode.", 403)
         reserve_run(
             store,
             settings,
@@ -295,6 +299,7 @@ def start_run(payload: StartRequest, request: Request) -> RunView:
             payload.mode,
             model,
             request.state.visitor,
+            public_live_daily_limit=settings.public_live_daily_limit,
         )
     )
 
@@ -418,7 +423,7 @@ def workspace() -> Row:
         "public_demo": settings.public_demo,
         "custom_questions": not settings.public_demo,
         "run_benchmarks": not settings.public_demo,
-        "live_models": not settings.public_demo,
+        "live_models": not settings.public_demo or settings.public_live_daily_limit > 0,
         "dataset": {
             "name": "Northstar Shop",
             "fictional": True,

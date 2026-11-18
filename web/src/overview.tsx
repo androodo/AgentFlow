@@ -154,8 +154,9 @@ export function NewInvestigation() {
           : 'Ask about checkout, releases, or support within this incident.'}</p>
         <label htmlFor="mode">Execution mode</label>
         <select id="mode" value={mode} onChange={(event) => setMode(event.target.value as Mode)}>
-          <ModeOptions connections={connections.value} liveAllowed={workspace.value?.live_models ?? false} />
+          <ModeOptions connections={connections.value} liveAllowed={workspace.value?.live_models ?? false} publicDemo={publicDemo} />
         </select>
+        {publicDemo && workspace.value?.live_models && <p className="field-hint">Live investigations have a daily limit. The rule-based demo is also available.</p>}
         {!publicDemo && <p className="field-hint">OpenAI, Claude, and local Ollama use server configuration.
           <Link to="/connections"> Check model connections</Link></p>}
         {error && <Notice>{error}</Notice>}

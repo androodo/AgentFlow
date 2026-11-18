@@ -1,5 +1,9 @@
 # Verification
 
+## November 18, 2026 public live-mode update
+
+Docker verification passed 25 backend tests. The new PostgreSQL check confirmed that OpenAI and Claude share the public limit and that a visitor can still start the rule-based demo after the live quota is used. The frontend production build passed, and the rebuilt recruiter container passed the anonymous-session and export checks with live access disabled by default. Funded calls to the recommended models have yet to be tested.
+
 ## November 17, 2026 update
 
 The updated application was exercised on Windows and Docker Desktop. The default mode remained credential-free.

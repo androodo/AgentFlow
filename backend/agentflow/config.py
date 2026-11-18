@@ -77,6 +77,7 @@ class Settings:
     anthropic_key: str = ""
     anthropic_model: str = ""
     public_demo: bool = False
+    public_live_daily_limit: int = 0
     session_secret: str = ""
     public_origin: str = ""
 
@@ -125,6 +126,9 @@ class Settings:
             anthropic_key=environ.get("ANTHROPIC_API_KEY", ""),
             anthropic_model=environ.get("ANTHROPIC_MODEL", ""),
             public_demo=public,
+            public_live_daily_limit=max(
+                0, min(20, int(environ.get("AGENTFLOW_PUBLIC_LIVE_DAILY_LIMIT", "0")))
+            ),
             session_secret=secret,
             public_origin=origin,
         )

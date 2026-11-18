@@ -1,12 +1,15 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from os import environ
 from time import monotonic, sleep
+from uuid import uuid4
 
 import httpx
 import pytest
 from agentflow.config import Settings, make_engine
 from agentflow.domain import Comparison, Evidence, load_cases
+from agentflow.store import Problem, Store
 from agentflow.transport import ALL_TOOLS, MCPClient
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
@@ -48,6 +51,45 @@ def wait_for(api: httpx.Client, path: str, status: str, timeout: int = 35):
 def create(api: httpx.Client, case: str = "checkout-conversion-drop", **options: object) -> str:
     run = checked(api.post("/api/v1/investigations", json={"scenario_id": case, **options}))
     return "/api/v1/investigations/" + run["id"]
+
+
+def test_public_live_limits_count_both_providers_and_keep_demo_available(monkeypatch):
+    store = Store(make_engine())
+    scenario = load_cases()["checkout-conversion-drop"].scenario
+    visitor, other = uuid4().hex, uuid4().hex
+    with store.engine.connect() as connection:
+        # Roll back fixtures together so the running scheduler never sees these jobs.
+        connection.execute(text("SELECT pg_advisory_xact_lock(189562001)"))
+        existing = connection.execute(
+            text("""SELECT count(*) FROM investigations WHERE visitor_id IS NOT NULL
+                AND mode IN ('openai','anthropic') AND created_at > now()-interval '1 day'""")
+        ).scalar_one()
+
+        @contextmanager
+        def begin():
+            with connection.begin_nested():
+                yield connection
+
+        monkeypatch.setattr(store.engine, "begin", begin)
+
+        def submit(mode, session):
+            row = store.create_run(
+                scenario,
+                scenario.question,
+                mode,
+                None if mode == "demo" else "test-model",
+                session,
+                public_live_daily_limit=existing + 2,
+            )
+            connection.execute(
+                text("UPDATE investigations SET status='canceled' WHERE id=:id"), {"id": row["id"]}
+            )
+
+        submit("openai", visitor)
+        submit("anthropic", visitor)
+        with pytest.raises(Problem, match="daily limit"):
+            submit("openai", other)
+        submit("demo", other)
 
 
 def test_mcp_real_transport_and_injection_boundary(api) -> None:

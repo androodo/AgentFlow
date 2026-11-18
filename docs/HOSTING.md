@@ -57,7 +57,7 @@ The free service can spin down after 15 minutes without incoming traffic and tak
 
 Public visitors can start seeded demo investigations, inspect their sources, approve or revise their own draft, and download their report. A signed cookie identifies their browser session. Work expires after one day. This provides isolation for a portfolio demonstration. Reviewer identity is represented by that browser session.
 
-Public mode accepts demo runs only and keeps owner actions behind that deployment boundary. Live OpenAI, Claude, and Ollama runs are available in the local owner workspace. Hosted inference needs provider credentials configured on the server. See [model setup](MODELS.md).
+Public mode defaults to the rule-based demo and keeps owner actions behind that deployment boundary. OpenAI and Claude are optional for seeded public runs with server credentials and a daily live-run limit. Local Ollama is available in the owner workspace. See [model setup](MODELS.md).
 
 ## Test the hosting image locally
 

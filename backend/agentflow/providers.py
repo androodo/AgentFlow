@@ -130,6 +130,9 @@ class HostedClient:
                     },
                 },
             }
+            if model == "gpt-6-luna" or model.startswith("gpt-6-luna-"):
+                # Leave room for the structured response inside the shared completion budget.
+                payload["reasoning_effort"] = "low"
         else:
             path = "/v1/messages"
             payload = {

@@ -83,6 +83,8 @@ class Store:
         mode: Mode,
         model: str | None,
         visitor_id: str | None = None,
+        *,
+        public_live_daily_limit: int = 0,
     ) -> Row:
         run_id = uuid4()
         with self.engine.begin() as connection:
@@ -97,6 +99,22 @@ class Store:
                     raise Problem(
                         "demo_busy", "Other investigations are running. Try again shortly.", 429
                     )
+                if mode in {"openai", "anthropic"}:
+                    # Count and insert under the same lock across both providers and all sessions.
+                    totals = connection.execute(
+                        text("""SELECT count(*) AS total,
+                               count(*) FILTER (WHERE visitor_id = :visitor) AS visitor_total
+                               FROM investigations WHERE visitor_id IS NOT NULL
+                               AND mode IN ('openai','anthropic')
+                               AND created_at > now()-interval '1 day'"""),
+                        {"visitor": visitor_id},
+                    ).one()
+                    if totals.total >= public_live_daily_limit or totals.visitor_total >= 2:
+                        raise Problem(
+                            "live_demo_limit",
+                            "The live demo reached its daily limit. Try the rule-based demo or come back later.",
+                            429,
+                        )
             connection.execute(
                 text(
                     """INSERT INTO investigations (id, scenario, question, mode, model, status, visitor_id)

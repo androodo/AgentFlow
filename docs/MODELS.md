@@ -20,7 +20,15 @@ The report composer ranks competing explanations, identifies evidence supporting
 
 The auditor recomputes funnel counts and percentage-point differences from source rows. It checks hashes, source references, windows, and allowed follow-up recipes. Generated hypotheses must cite supplied IDs. Numeric literals in factual prose are checked against those cited facts. Numerical observations are composed from audited facts. These checks cover arithmetic, numeric literals, scope, and citation integrity. Semantic groundedness still requires review.
 
-A run can make up to nine logical model calls, including a revision, with two bounded attempts per call. Each call has an output budget, a response-size cap, and a timeout. Provider-reported token counts are recorded when supplied. OpenAI or Claude usage requires a funded provider account and is billed by that provider. Public recruiter mode executes the free deterministic demo.
+A run can make up to nine logical model calls, including a revision, with two bounded attempts per call. Each call has an output budget, a response-size cap, and a timeout. Provider-reported token counts are recorded when supplied. OpenAI or Claude usage requires API access and is billed by that provider.
+
+## Enable live runs on Render
+
+On the AgentFlow web service, open **Environment**. Keep `AGENTFLOW_PUBLIC_DEMO=true` to preserve visitor isolation and seeded questions. To offer OpenAI, set `OPENAI_API_KEY` and `OPENAI_MODEL=gpt-6-luna`. To offer Claude, set `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL=claude-haiku-5-5`. Save keys in Render's server environment. Configure one provider or both.
+
+Set `AGENTFLOW_PUBLIC_LIVE_DAILY_LIMIT=5` to allow up to five live starts across both providers in a rolling 24-hour window. Each browser session can start up to two. The default is zero, and values above 20 are capped at 20. This controls run counts; dollar charges depend on provider, tokens, retries, and review revisions. The Demo option remains available under the usual demo limits. Set the live limit to zero and redeploy to stop new live starts.
+
+Deploy the latest commit and open **New investigation → Execution mode** on the public site. Select the configured provider and complete one seeded case to validate model access and report generation. Check measured usage in the provider dashboard. [Render environment variables](https://render.com/docs/configure-environment-variables)
 
 ## Current verification boundary
 
