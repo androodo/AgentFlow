@@ -10,7 +10,7 @@ The owner workspace offers the credential-free demo, local Ollama, OpenAI, and A
 
 For local Docker, edit `.env` and run `docker compose up -d --force-recreate api`. Open **Connections**, test model access, then select the provider in **New investigation**. Use an exact model ID available to your account. The model needs structured output support for this request format.
 
-OpenAI requests use Chat Completions with a strict JSON-schema response format. Claude requests use a forced `submit_assessment` schema tool. Both parse the result into Pydantic models. Provider URLs are fixed in the backend. Local Ollama uses its direct chat endpoint with a JSON schema. [OpenAI structured outputs](https://platform.openai.com/docs/guides/structured-outputs), [Claude tool use](https://docs.claude.com/en/docs/agents-and-tools/tool-use/implement-tool-use), [Ollama structured outputs](https://docs.ollama.com/capabilities/structured-outputs)
+OpenAI uses strict JSON Schema with Chat Completions. Claude Haiku 5.5 uses native structured JSON. Other Claude model configurations use a forced `submit_assessment` schema tool. AgentFlow validates all responses with Pydantic and enforces evidence constraints locally. Provider URLs are fixed in the backend. Local Ollama uses its direct chat endpoint with a JSON schema. [OpenAI structured outputs](https://platform.openai.com/docs/guides/structured-outputs), [Claude structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs), [Ollama structured outputs](https://docs.ollama.com/capabilities/structured-outputs)
 
 ## What a live run does
 

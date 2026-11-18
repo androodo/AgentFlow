@@ -1,5 +1,11 @@
 # Verification
 
+## November 18, 2026 hosted workspace follow-up
+
+A funded GPT-6 Luna checkout investigation passed on Render with the hosted model recovery commit. The run reached review, incorporated a revision, accepted approval, and exported a cited Markdown report. The live Claude Haiku 5.5 run reached report composition, where its output was rejected. The follow-up switches that model to native structured JSON while retaining local validation. That change still requires a funded run after deployment.
+
+The renamed hosted application container passed a local smoke test with a fresh database. The test restarted it at an active review checkpoint and checked that the saved draft, private review, approval, and export remained available in the same session.
+
 ## November 18, 2026 hosted model recovery
 
 Reproduced the original Checkout Conversion Drop failure on Render with live GPT-6 Luna. The planner and initial specialists returned validated responses. The metrics follow-up then returned billable responses that failed local validation on both attempts before report composition. The original trace did not record the precise rejection reason.

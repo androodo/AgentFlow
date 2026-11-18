@@ -56,13 +56,20 @@ def test_hosted_investigation_survives_rejected_followup_and_revises_over_real_m
             name, schema = spec["name"], spec["schema"]
             supplied = json.loads(body["messages"][1]["content"])
         else:
-            schema = body["tools"][0]["input_schema"]
+            assert "tools" not in body and body["thinking"] == {"type": "disabled"}
+            assert body["output_config"]["format"]["type"] == "json_schema"
+            schema = body["output_config"]["format"]["schema"]
             name = schema["title"]
             supplied = json.loads(body["messages"][0]["content"])
         if name == "RouteChoice":
             value = {"domains": ["metrics", "timeline", "support"]}
         elif name == "SpecialistAssessment":
-            assert schema["properties"]["observation"]["pattern"] == "^[^0-9]*$"
+            observation = schema["properties"]["observation"]
+            if provider == "openai":
+                assert observation["pattern"] == "^[^0-9]*$"
+            else:
+                assert "pattern" not in observation and "minLength" not in observation
+                assert "Do not include digits" in observation["description"]
             domain = supplied["domain"]
             focus = {"metrics": "comparison", "timeline": "releases", "support": "tickets_current"}[
                 domain
@@ -85,6 +92,12 @@ def test_hosted_investigation_survives_rejected_followup_and_revises_over_real_m
             }
         else:
             assert name == "Narrative"
+            if provider == "anthropic":
+                expectations = schema["properties"]["explanations"]
+                assert "maxItems" not in expectations and "minItems" not in expectations
+                assert "Return exactly 2 items." in expectations["description"]
+                explanation = schema["$defs"]["Explanation"]["properties"]
+                assert explanation["supporting_evidence"]["items"]["enum"]
             assert any(key.startswith("followup_") for key in supplied["evidence"])
             observations = supplied["verified_observations"]
             ids = list(dict.fromkeys(ref for item in observations for ref in item["evidence_ids"]))
@@ -114,6 +127,8 @@ def test_hosted_investigation_survives_rejected_followup_and_revises_over_real_m
                 "next_actions": ["Compare flag exposure across shoppers."],
                 "unresolved_questions": ["Do failures concentrate among exposed shoppers?"],
             }
+            if provider == "anthropic" and len(revisions) == 1:
+                value["explanations"][0]["uncertainty"] = "The timing does not prove causality."
         result = (
             {
                 "choices": [{"message": {"content": json.dumps(value)}}],
@@ -121,7 +136,7 @@ def test_hosted_investigation_survives_rejected_followup_and_revises_over_real_m
             }
             if provider == "openai"
             else {
-                "content": [{"type": "tool_use", "name": "submit_assessment", "input": value}],
+                "content": [{"type": "text", "text": json.dumps(value)}],
                 "usage": {"input_tokens": 120, "output_tokens": 60},
             }
         )
@@ -165,7 +180,7 @@ def test_hosted_investigation_survives_rejected_followup_and_revises_over_real_m
     assert sum(kind == "evidence_verified" for _, kind, _ in events) == 1
     skips = [data for _, kind, data in events if kind == "specialist_output_skipped"]
     assert len(skips) == 1 and skips[0]["followup"]
-    assert sum(kind == "model_failed" for _, kind, _ in events) == 2
+    assert sum(kind == "model_failed" for _, kind, _ in events) == 2 + (provider == "anthropic")
     tampered = Narrative.model_validate(
         {
             "explanations": report.explanations,
@@ -183,7 +198,7 @@ def test_hosted_investigation_survives_rejected_followup_and_revises_over_real_m
         config,
     )
     revised = graph.get_state(config)
-    assert revisions == ["", note]
+    assert revisions == (["", note] if provider == "openai" else ["", "", note])
     assert revised.values["draft"]["review_round"] == 2
     assert revised.values["draft"]["analysis_source"] == "model"
     graph.invoke(

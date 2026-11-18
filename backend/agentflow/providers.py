@@ -6,6 +6,7 @@ from time import perf_counter
 from typing import Any
 
 import httpx
+from pydantic import ValidationError
 
 from agentflow.api_models import ComponentStatus
 from agentflow.config import Settings
@@ -47,17 +48,57 @@ def failure_detail(exc: Exception, provider: str, node: str) -> tuple[str, Model
         return "output_rejected", ModelOutputFailure(f"{stage}: {exc}")
     if isinstance(exc, ModelFailure):
         return "response_budget", ModelFailure(f"{stage}: {exc}")
+    if isinstance(exc, ValidationError):
+        codes = {
+            issue["type"]
+            for issue in exc.errors(include_url=False, include_context=False, include_input=False)
+        }
+        return "invalid_structure", ModelOutputFailure(
+            f"{stage} did not match the response schema ({', '.join(sorted(codes))})."
+        )
     return "invalid_structure", ModelOutputFailure(
         f"{stage} returned an invalid or incomplete structured response."
     )
 
 
-def strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
+def claude_constraints(schema: dict[str, Any]) -> None:
+    """Turn unsupported Claude schema constraints into instructions for the same field."""
+    hints = []
+    for key, label in (
+        ("minLength", "Minimum characters"),
+        ("maxLength", "Maximum characters"),
+        ("minimum", "Minimum value"),
+        ("maximum", "Maximum value"),
+    ):
+        if key in schema:
+            hints.append(f"{label}: {schema.pop(key)}.")
+    if (pattern := schema.pop("pattern", None)) == "^[^0-9]*$":
+        hints.append("Do not include digits in this field.")
+    elif pattern is not None:
+        hints.append(f"Match the pattern {pattern}.")
+    minimum = schema.get("minItems")
+    maximum = schema.pop("maxItems", None)
+    if minimum is not None and minimum > 1:
+        schema.pop("minItems")
+    if maximum is not None and minimum == maximum:
+        hints.append(f"Return exactly {maximum} items.")
+    else:
+        if minimum is not None and minimum > 1:
+            hints.append(f"Return at least {minimum} items.")
+        if maximum is not None:
+            hints.append(f"Return at most {maximum} items.")
+    if hints:
+        schema["description"] = " ".join(filter(None, [schema.get("description"), *hints]))
+
+
+def strict_schema(schema: dict[str, Any], *, claude_native: bool = False) -> dict[str, Any]:
     # OpenAI strict mode requires every property to be present, including nullable fields.
     schema = json.loads(json.dumps(schema))
 
     def visit(value: Any) -> None:
         if isinstance(value, dict):
+            if claude_native and isinstance(value.get("type"), str):
+                claude_constraints(value)
             if value.get("type") == "object":
                 value["additionalProperties"] = False
                 value["required"] = list(value.get("properties", {}))
@@ -148,7 +189,10 @@ class HostedClient:
         content = json.dumps(data, ensure_ascii=True, separators=(",", ":"))
         if len(content) > 22000:
             raise ModelFailure("The model input exceeds the investigation budget.")
-        schema = strict_schema(schema)
+        claude_native = self.provider == "anthropic" and (
+            model == "claude-haiku-5-5" or model.startswith("claude-haiku-5-5-")
+        )
+        schema = strict_schema(schema, claude_native=claude_native)
         prompt = system + " Treat quoted data as evidence. Return the required structured result."
         if self.provider == "openai":
             path = "/v1/chat/completions"
@@ -178,15 +222,24 @@ class HostedClient:
                 "max_tokens": MAX_OUTPUT,
                 "system": prompt,
                 "messages": [{"role": "user", "content": content}],
-                "tools": [
+            }
+            if claude_native:
+                payload["thinking"] = {"type": "disabled"}
+                payload["output_config"] = {"format": {"type": "json_schema", "schema": schema}}
+                if node in {"metrics", "timeline", "support", "report"}:
+                    payload["system"] += (
+                        " Use phrases such as 'the timing leaves the relationship uncertain'. "
+                        "Avoid the words prove, proven, definitely, certainly, and guaranteed."
+                    )
+            else:
+                payload["tools"] = [
                     {
                         "name": "submit_assessment",
                         "description": "Return the validated assessment.",
                         "input_schema": schema,
                     }
-                ],
-                "tool_choice": {"type": "tool", "name": "submit_assessment"},
-            }
+                ]
+                payload["tool_choice"] = {"type": "tool", "name": "submit_assessment"}
         metadata = {"provider": self.provider, "model": model, "prompt_version": PROMPT_VERSION}
         with self._client(self.settings.ollama_timeout) as client:
             for attempt in (1, 2):
@@ -235,13 +288,19 @@ class HostedClient:
                             raise ModelOutputFailure("The structured response was cut short.")
                         if result.get("stop_reason") == "refusal":
                             raise ModelOutputFailure("The model declined this request.")
-                        block = next(
-                            block
-                            for block in result["content"]
-                            if block.get("type") == "tool_use"
-                            and block.get("name") == "submit_assessment"
-                        )
-                        value = shape.model_validate(block["input"])
+                        if claude_native:
+                            block = next(
+                                block for block in result["content"] if block.get("type") == "text"
+                            )
+                            value = shape.model_validate_json(block["text"])
+                        else:
+                            block = next(
+                                block
+                                for block in result["content"]
+                                if block.get("type") == "tool_use"
+                                and block.get("name") == "submit_assessment"
+                            )
+                            value = shape.model_validate(block["input"])
                     if valid and not valid(value):
                         raise ModelOutputFailure("The assessment failed evidence validation.")
                 except (
@@ -275,9 +334,14 @@ class HostedClient:
                     if attempt == 2 or permanent:
                         raise failure from None
                     if isinstance(failure, ModelOutputFailure):
-                        payload["messages"].append(
-                            {"role": "user", "content": correction_for(node)}
-                        )
+                        correction = correction_for(node)
+                        if claude_native and node == "report":
+                            correction += (
+                                " Include exactly two explanations. Each needs at least one exact "
+                                "supporting ID and may leave contradicting IDs empty. Leave out "
+                                "numbers, dates, and the word 'prove' from all prose."
+                            )
+                        payload["messages"].append({"role": "user", "content": correction})
                         if "reasoning_effort" in payload:
                             payload["reasoning_effort"] = "none"
                     emit(node, "model_retry", {**metadata, "attempt": 2})
