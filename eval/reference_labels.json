@@ -1,0 +1,32 @@
+{
+  "version": "northstar-rubric-1",
+  "label_source": "project-authored reference annotations",
+  "contexts": {
+    "checkout": {"ref-funnel":"Matched 3-day windows: 870/1050 before, 723/1050 current (-14.0 percentage points).","ref-payment":"Mobile card authentication timeouts: 0 before and 180 current.","ref-release":"Checkout auth release deployed Oct 21. No assignment or controlled test is available."},
+    "telemetry": {"ref-coverage":"Baseline has 3 days, current has 0 days of traffic telemetry.","ref-collector":"Collector batch size changed on Nov 11."},
+    "traffic": {"ref-mix":"Web was 90% in both windows, mobile was 60% in both. Mobile rose from 300/900 to 600/900 checkout starts.","ref-aggregate":"Aggregate completion fell from 80% to 70%."},
+    "support": {"ref-tickets":"Shipping tickets rose from 3 to 21 recorded cases.","ref-flag":"Delivery estimate flag rolled out in the same window. Exposure of individual ticket authors is unknown."}
+  },
+  "snippets": [
+    {"id":"checkout-01","context":"checkout","text":"The checkout completion rate fell 14.0 percentage points [ref-funnel]. Mobile card timeouts rose from 0 to 180 [ref-payment]. The October 21 rollout aligns with the change, so compare exposure cohorts before attributing cause [ref-release].","scores":{"groundedness":5,"completeness":5,"clarity":5}},
+    {"id":"checkout-02","context":"checkout","text":"Something broke. Bad deployment.","scores":{"groundedness":1,"completeness":1,"clarity":2}},
+    {"id":"checkout-03","context":"checkout","text":"The checked funnel dropped from 870 to 723 purchases [ref-funnel]. Compare the checkout population with the previous window.","scores":{"groundedness":4,"completeness":3,"clarity":4}},
+    {"id":"checkout-04","context":"checkout","text":"The rollout caused an 80 percentage-point loss in conversions [ref-release].","scores":{"groundedness":1,"completeness":1,"clarity":3}},
+    {"id":"checkout-05","context":"checkout","text":"Payments showed 180 current mobile card timeouts [ref-payment]. The observed increase may contribute to missed orders, but cohort exposure remains unknown [ref-release].","scores":{"groundedness":5,"completeness":3,"clarity":4}},
+    {"id":"telemetry-01","context":"telemetry","text":"Current traffic has zero recorded days versus three baseline days [ref-coverage], so a comparable conversion estimate is unavailable. The collector change is a candidate to inspect [ref-collector]. Recover telemetry before estimating impact.","scores":{"groundedness":5,"completeness":5,"clarity":5}},
+    {"id":"telemetry-02","context":"telemetry","text":"Conversions went to zero. Roll the collector back.","scores":{"groundedness":1,"completeness":1,"clarity":3}},
+    {"id":"telemetry-03","context":"telemetry","text":"Current coverage is missing [ref-coverage].","scores":{"groundedness":5,"completeness":2,"clarity":4}},
+    {"id":"telemetry-04","context":"telemetry","text":"Given a partial? complete? collector, the coverage varies [ref-collector]. The business measure should be inspected soon.","scores":{"groundedness":2,"completeness":2,"clarity":1}},
+    {"id":"telemetry-05","context":"telemetry","text":"Missing traffic data prevents comparison [ref-coverage]. Check the collector logs and re-run the comparison once comparable windows exist.","scores":{"groundedness":5,"completeness":4,"clarity":5}},
+    {"id":"traffic-01","context":"traffic","text":"Overall checkout completion fell from 80% to 70% [ref-aggregate]. Segment rates stayed at 90% web and 60% mobile as mobile gained 300 of 900 starts [ref-mix]. Reweight the rates to a common mix to test the aggregate explanation.","scores":{"groundedness":5,"completeness":5,"clarity":5}},
+    {"id":"traffic-02","context":"traffic","text":"Mobile usability collapsed after the campaign [ref-mix].","scores":{"groundedness":1,"completeness":1,"clarity":3}},
+    {"id":"traffic-03","context":"traffic","text":"Every segment was stable [ref-mix]. Overall conversion fell ten points [ref-aggregate].","scores":{"groundedness":5,"completeness":3,"clarity":4}},
+    {"id":"traffic-04","context":"traffic","text":"Aggregate results were lower, probably because of composition. Audit campaign cohorts.","scores":{"groundedness":3,"completeness":3,"clarity":4}},
+    {"id":"traffic-05","context":"traffic","text":"At 70, after 80, web and mobile 90 or 60 [ref-mix], so reweight things.","scores":{"groundedness":3,"completeness":2,"clarity":1}},
+    {"id":"support-01","context":"support","text":"Recorded shipping complaints rose from 3 to 21 [ref-tickets] during the delivery-estimate rollout [ref-flag]. Compare ticket authors and exposed orders before attributing the change to the flag.","scores":{"groundedness":5,"completeness":5,"clarity":5}},
+    {"id":"support-02","context":"support","text":"All shoppers received broken delivery dates because of the flag [ref-flag].","scores":{"groundedness":1,"completeness":1,"clarity":3}},
+    {"id":"support-03","context":"support","text":"Shipping complaints rose from 3 to 21 [ref-tickets].","scores":{"groundedness":5,"completeness":2,"clarity":4}},
+    {"id":"support-04","context":"support","text":"The flag and the messages coincide [ref-flag]. Collect exposure data.","scores":{"groundedness":4,"completeness":3,"clarity":3}},
+    {"id":"support-05","context":"support","text":"Delivery estimate changes may explain more shipping complaints. Sample tickets and split them by flag exposure before drawing conclusions [ref-tickets] [ref-flag].","scores":{"groundedness":5,"completeness":4,"clarity":5}}
+  ]
+}

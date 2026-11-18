@@ -1,0 +1,18 @@
+{
+  "generator_seed": 73421,
+  "dataset_version": "northstar-1",
+  "profiles": [
+    {"id":"checkout-conversion-drop","day":"2025-10-21","before":[[1200,200,170],[800,150,120]],"after":[[1200,200,169],[800,150,72]],"timeouts":[0,60],"releases":[["v4.21","checkout",0,"New card authentication flow for mobile checkout."]],"flag":["card_auth_v2","mobile",50],"tickets_before":{"payment_failure":1,"shipping":1},"tickets_after":{"payment_failure":6,"shipping":1},"injection":true},
+    {"id":"traffic-shift","day":"2025-10-28","before":[[1200,200,180],[800,100,60]],"after":[[600,100,90],[1600,200,120]],"releases":[["v4.22","marketing",0,"App campaign links began directing customers to mobile checkout."]],"tickets_before":{"shipping":1},"tickets_after":{"shipping":1}},
+    {"id":"healthy-rollout","day":"2025-11-04","before":[[1200,200,170],[800,150,120]],"after":[[1200,200,171],[800,150,120]],"releases":[["v4.23","checkout",0,"Updated checkout address labels."]],"flag":["clearer_address_labels","all",100],"tickets_before":{"shipping":1},"tickets_after":{"shipping":1}},
+    {"id":"missing-traffic","day":"2025-11-11","before":[[1200,200,170],[800,150,120]],"after":null,"releases":[["v4.24","telemetry",0,"Changed the analytics collector batch size."]],"tickets_before":{"shipping":1},"tickets_after":{"shipping":1}},
+    {"id":"support-contradiction","day":"2025-11-18","before":[[1200,200,170],[800,150,120]],"after":[[1200,200,175],[800,150,131]],"releases":[["v4.25","support",0,"Added checkout as a help-center contact reason."]],"tickets_before":{"payment_failure":1},"tickets_after":{"payment_failure":6}},
+    {"id":"release-after-drop","day":"2025-11-25","before":[[1200,200,170],[800,150,120]],"after":[[1200,200,169],[800,150,95]],"releases":[["v4.26","checkout",1,"Changed the order summary renderer."]],"flag":["compact_summary","all",100],"tickets_before":{"payment_failure":1},"tickets_after":{"payment_failure":2}},
+    {"id":"fewer-visits","day":"2025-12-02","before":[[1200,200,170],[800,150,120]],"after":[[600,100,85],[400,75,60]],"tickets_before":{"shipping":1},"tickets_after":{"shipping":1}},
+    {"id":"wallet-only","day":"2025-12-09","before":[[1200,200,170],[800,150,120]],"after":[[1200,200,170],[800,150,90]],"timeouts":[0,28],"timeout_method":"wallet","releases":[["v4.27","checkout",0,"Rolled out an updated mobile wallet callback."]],"flag":["wallet_callback","mobile",100],"tickets_before":{"payment_failure":1},"tickets_after":{"payment_failure":4}},
+    {"id":"silent-drop","day":"2025-12-16","before":[[1200,200,170],[800,150,120]],"after":[[1200,200,165],[800,150,105]],"payment_gap":true,"tickets_before":{"payment_failure":1},"tickets_after":{}},
+    {"id":"small-denominator","day":"2025-12-23","before":[[40,5,4],[25,5,4]],"after":[[40,5,3],[25,5,3]],"releases":[["v4.28","checkout",0,"Adjusted checkout button spacing on a low-volume pilot."]],"tickets_before":{"shipping":1},"tickets_after":{"shipping":1}},
+    {"id":"support-only","day":"2025-12-30","before":[[1200,200,170],[800,150,120]],"after":[[1200,200,170],[800,150,120]],"releases":[["v4.29","shipping",0,"Changed estimated delivery dates on the order status page."]],"flag":["delivery_estimate_v2","all",100],"tickets_before":{"shipping":1},"tickets_after":{"shipping":7}},
+    {"id":"ambiguous-releases","day":"2026-01-06","before":[[1200,200,170],[800,150,120]],"after":[[1200,200,160],[800,150,105]],"releases":[["v4.30","checkout",0,"Updated checkout validation."] ,["v4.31","checkout",0,"Updated the payment provider client."]],"flag":["inline_validation","all",100],"tickets_before":{"payment_failure":1},"tickets_after":{"payment_failure":3}}
+  ]
+}

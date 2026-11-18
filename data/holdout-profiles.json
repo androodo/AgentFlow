@@ -1,0 +1,9 @@
+{
+  "generator_seed": 84512,
+  "dataset_version": "northstar-holdout-1",
+  "profiles": [
+    {"id":"holdout-stable","day":"2026-01-13","before":[[1300,230,204],[750,130,103]],"after":[[1300,230,205],[750,130,102]],"tickets_before":{"shipping":1},"tickets_after":{"shipping":1}},
+    {"id":"holdout-payment","day":"2026-01-20","before":[[1180,220,190],[820,155,130]],"after":[[1180,220,178],[820,155,91]],"timeouts":[8,35],"releases":[["v5.1","checkout",0,"Adjusted card authentication on web and mobile."]],"flag":["auth_refresh","all",40],"tickets_before":{"payment_failure":1},"tickets_after":{"payment_failure":5}},
+    {"id":"holdout-low-volume","day":"2026-01-27","before":[[100,12,10],[50,6,5]],"after":[[100,12,9],[50,6,4]],"releases":[["v5.2","checkout",0,"Enabled a small mobile checkout pilot."]],"tickets_before":{},"tickets_after":{}}
+  ]
+}
