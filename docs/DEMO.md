@@ -11,6 +11,8 @@
 
 The mode banner identifies rule-based and live runs. Model modes require an owner-configured provider and model ID. A live model run can select follow-up checks and rank competing explanations. The report preserves arithmetic from deterministic tools.
 
+To record a captioned walkthrough of the local workflow, see the [video recording guide](VIDEO_DEMO.md).
+
 ## Capture screenshots
 
 ```powershell
