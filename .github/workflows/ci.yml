@@ -1,0 +1,30 @@
+name: AgentFlow verification
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  demo:
+    timeout-minutes: 22
+    runs-on: ubuntu-latest
+    env:
+      AGENTFLOW_BROWSER_WITH_DEPS: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Verify the local stack and browser demo
+        run: bash scripts/verify.sh
+      - name: Verify the recruiter hosting container
+        run: |
+          docker compose -f compose.yml -f compose.hosted.yml --profile hosted up --build -d --wait --wait-timeout 180 recruiter
+          python3 scripts/verify-public.py
+      - name: Stop AgentFlow services
+        if: always()
+        run: docker compose -f compose.yml -f compose.hosted.yml --profile hosted down
